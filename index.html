@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mac & AI 学習ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0d;--bg2:#161616;--bg3:#1e1e1e;--bg4:#252525;
+  --border:#2e2e2e;--border2:#3a3a3a;
+  --text:#f0ede8;--text2:#a8a49e;--text3:#6b6863;
+  --accent:#e8c547;--accent2:#c4a030;
+  --green:#4caf82;--blue:#5b9cf6;--coral:#f07060;
+  --font:'Noto Sans JP',sans-serif;--mono:'Space Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding:0}
+.app{max-width:900px;margin:0 auto;padding:1.5rem 1rem}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-title{font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--text2);text-transform:uppercase;font-family:var(--mono)}
+.logo-sub{font-size:18px;font-weight:700;color:var(--text);line-height:1.2}
+.date-badge{font-family:var(--mono);font-size:12px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;text-align:right}
+.date-badge .day{font-size:20px;font-weight:700;color:var(--text2);display:block}
+.today-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;position:relative;overflow:hidden}
+.today-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--green))}
+.lesson-header{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+.lesson-num{font-family:var(--mono);font-size:11px;color:var(--accent);background:rgba(232,197,71,0.12);border:1px solid rgba(232,197,71,0.25);border-radius:4px;padding:3px 8px;letter-spacing:.05em}
+.lesson-tag{font-size:11px;color:var(--text3);background:var(--bg4);border-radius:4px;padding:3px 8px}
+.lesson-title{font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:.6rem;line-height:1.35}
+.lesson-body{font-size:.95rem;color:var(--text2);line-height:1.8;margin-bottom:1.2rem}
+.tips-box{background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:1rem;margin-bottom:1rem}
+.tips-label{font-family:var(--mono);font-size:11px;color:var(--green);margin-bottom:.6rem;letter-spacing:.05em}
+.tip-item{display:flex;gap:8px;font-size:.88rem;color:var(--text2);margin-bottom:.4rem;align-items:flex-start}
+.tip-bullet{color:var(--accent);flex-shrink:0;margin-top:2px}
+.shortcut-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem}
+.kbd{background:var(--bg3);border:1px solid var(--border2);border-bottom-width:3px;border-radius:5px;padding:3px 8px;font-family:var(--mono);font-size:11px;color:var(--text2)}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center}
+.stat-num{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--text);display:block}
+.stat-label{font-size:11px;color:var(--text3);margin-top:2px}
+.progress-bar{height:4px;background:var(--bg4);border-radius:2px;margin-top:.6rem;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px}
+.section-title{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.8rem}
+.archive-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font-size:12px;padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:var(--font)}
+.tab.active{border-color:var(--accent);color:var(--accent);background:rgba(232,197,71,.08)}
+.archive-list{display:flex;flex-direction:column;gap:6px}
+.archive-item{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;cursor:pointer}
+.archive-item.expanded{border-color:var(--accent2)}
+.arc-day{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:38px}
+.arc-tag{font-size:10px;padding:2px 7px;border-radius:3px;font-family:var(--mono)}
+.arc-tag.trackpad{background:rgba(91,156,246,.12);color:var(--blue);border:1px solid rgba(91,156,246,.2)}
+.arc-tag.spotlight{background:rgba(76,175,130,.12);color:var(--green);border:1px solid rgba(76,175,130,.2)}
+.arc-tag.dock{background:rgba(232,197,71,.12);color:var(--accent);border:1px solid rgba(232,197,71,.2)}
+.arc-tag.ai{background:rgba(240,112,96,.12);color:var(--coral);border:1px solid rgba(240,112,96,.2)}
+.arc-tag.finder{background:rgba(160,130,200,.12);color:#b09fe0;border:1px solid rgba(160,130,200,.2)}
+.arc-title{font-size:.88rem;color:var(--text2);flex:1}
+.arc-expand{font-size:14px;color:var(--text3)}
+.arc-body{font-size:.85rem;color:var(--text3);line-height:1.7;padding:.75rem 1rem .75rem 62px;border-top:1px solid var(--border);display:none}
+.archive-item.expanded + .arc-body{display:block}
+footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);font-size:11px;color:var(--text3);font-family:var(--mono);text-align:center;letter-spacing:.05em}
+@media(max-width:600px){
+  .lesson-title{font-size:1.15rem}
+  .header{flex-direction:column}
+  .filter-tabs{gap:4px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 2C10 2 7 5 7 9c0 1.7 1.3 3 3 3s3-1.3 3-3c0-1-.4-2-1-2.8" stroke="#0d0d0d" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="10" cy="15" r="1.5" fill="#0d0d0d"/>
+        <path d="M4 17h12" stroke="#0d0d0d" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-title">Daily Learning</div>
+      <div class="logo-sub">Mac & AI 学習ダッシュボード</div>
+    </div>
+  </div>
+  <div class="date-badge">
+    <span class="day" id="dayNum">—</span>
+    <span id="dateStr">読み込み中...</span>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <span class="stat-num" id="statDay">0</span>
+    <div class="stat-label">今日のレッスン</div>
+    <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-num" id="statDone">0</span>
+    <div class="stat-label">完了済み</div>
+    <div class="progress-bar"><div class="progress-fill" id="prog2" style="width:0%;background:var(--green)"></div></div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-num">30</span>
+    <div class="stat-label">総レッスン数</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--border2)"></div></div>
+  </div>
+</div>
+
+<div class="today-card" id="todayCard">
+  <div class="lesson-header">
+    <span class="lesson-num" id="lessonNum">DAY 01</span>
+    <span class="lesson-tag" id="lessonTag">読み込み中</span>
+  </div>
+  <div class="lesson-title" id="lessonTitle">読み込み中...</div>
+  <div class="lesson-body" id="lessonBody"></div>
+  <div class="tips-box">
+    <div class="tips-label">▸ PRACTICE TIPS</div>
+    <div id="tipsList"></div>
+    <div id="shortcutsArea"></div>
+  </div>
+</div>
+
+<div class="archive-header">
+  <div class="section-title">アーカイブ</div>
+  <div class="filter-tabs">
+    <button class="tab active" onclick="filterArchive('all',this)">すべて</button>
+    <button class="tab" onclick="filterArchive('trackpad',this)">トラックパッド</button>
+    <button class="tab" onclick="filterArchive('spotlight',this)">Spotlight</button>
+    <button class="tab" onclick="filterArchive('ai',this)">AI活用</button>
+    <button class="tab" onclick="filterArchive('finder',this)">Finder</button>
+    <button class="tab" onclick="filterArchive('dock',this)">Dock</button>
+  </div>
+</div>
+<div class="archive-list" id="archiveList"></div>
+
+<footer>朝 5:00 に翌日のレッスンが解放されます　｜　MacBook Air 2026 対応</footer>
+</div>
+
+<script>
+// =============================================
+// ▼ レッスンの開始日（ここを変更して始める日を設定）
+// =============================================
+const START_DATE = new Date('2025-06-01T00:00:00+09:00');
+
+// =============================================
+// ▼ レッスンデータ（ここを編集してレッスンを追加・変更できます）
+// =============================================
+const LESSONS = [
+  {
+    day: 1, tag: 'trackpad',
+    title: 'トラックパッドの基本：タップ＆スクロール',
+    body: 'MacBook の最大の武器はトラックパッドです。マウスなしで全操作できます。まずは「タップでクリック」を有効にして、指先だけで快適に操作しましょう。',
+    tips: ['システム設定→トラックパッド→タップでクリックをON', '2本指で上下スクロール（スクロール方向は「ナチュラル」が標準）', '2本指でタップするとコンテキストメニュー（右クリック相当）'],
+    shortcuts: []
+  },
+  {
+    day: 2, tag: 'spotlight',
+    title: 'Spotlight で何でも瞬時に起動',
+    body: '⌘ + Space で起動する Spotlight は、アプリ・ファイル・計算・翻訳まで何でもできる万能ランチャーです。マウスより速く目的地にたどり着けます。',
+    tips: ['⌘+Space で Spotlight を開く', 'アプリ名を2〜3文字打つだけで起動', '計算式をそのまま入力（例：3*800）すると即座に答えが出る'],
+    shortcuts: ['⌘', 'Space']
+  },
+  {
+    day: 3, tag: 'dock',
+    title: 'Dock をカスタマイズして作業効率UP',
+    body: '画面下部の Dock は自分専用のショートカットバーです。よく使うアプリだけ残して、使わないものは思い切って削除しましょう。すっきりさせるほど作業が速くなります。',
+    tips: ['アプリを Dock から外す：アイコンを Dock の外にドラッグ→「削除」', 'Dock を小さくする：システム設定→Dock のサイズを調整', '「自動的に隠す」をONにすると画面が広く使える'],
+    shortcuts: []
+  },
+  {
+    day: 4, tag: 'trackpad',
+    title: '3本指・4本指ジェスチャーをマスター',
+    body: '複数の指を使うジェスチャーでウィンドウ操作が劇的にスムーズになります。Mission Control と Launchpad は特によく使うので今日中に覚えましょう。',
+    tips: ['3本指で上スワイプ → Mission Control（全ウィンドウ一覧）', '3本指で左右スワイプ → デスクトップ切り替え', '4本指でピンチ → Launchpad（全アプリ一覧）'],
+    shortcuts: []
+  },
+  {
+    day: 5, tag: 'finder',
+    title: 'Finder でファイル整理の基本を学ぶ',
+    body: 'Finder は Mac のファイル管理の中心です。「書類」「デスクトップ」「ダウンロード」の3フォルダを整理するだけで、ファイルが行方不明になることがなくなります。',
+    tips: ['⌘+N で新しい Finder ウィンドウ', '⌘+Shift+N で新規フォルダ作成', 'スペースキーでファイルを選択→クイックルックでプレビュー'],
+    shortcuts: ['⌘', 'Shift', 'N']
+  },
+  {
+    day: 6, tag: 'spotlight',
+    title: 'Spotlight で計算・単位換算を使いこなす',
+    body: 'Spotlight は電卓代わりにもなります。また「100ドル 円」と入力すると現在の為替レートで換算してくれます（ネット接続時）。日常の小さな計算をすべて Spotlight で解決しましょう。',
+    tips: ['250*8 → 即座に 2000 と表示', '100ドル 円 → 換算結果を表示', '10km マイル → 単位換算も対応'],
+    shortcuts: ['⌘', 'Space']
+  },
+  {
+    day: 7, tag: 'ai',
+    title: 'Mac 内蔵 AI「Apple Intelligence」を初体験',
+    body: 'macOS Sequoia 以降（2024〜）に搭載された Apple Intelligence は、文章の改善・要約・返信提案などを行う Mac 内蔵の AI です。インターネット不要でプライバシー保護しながら動作します。',
+    tips: ['テキストを選択→右クリック→「書き込みツール」で AI 編集', 'Siri に「このメールを要約して」と話しかける', '通知センターの「通知の要約」機能をONにする'],
+    shortcuts: []
+  },
+  {
+    day: 8, tag: 'trackpad',
+    title: 'ピンチ・回転ジェスチャーで画像を操作',
+    body: '写真アプリや PDF ビューアでは、2本指のピンチ操作で拡大縮小ができます。また特定のアプリでは回転も可能です。トラックパッドをスマートフォンのように直感的に使いましょう。',
+    tips: ['2本指でピンチアウト → 拡大', '2本指でピンチイン → 縮小', '⌘+0 で元のサイズに戻る（多くのアプリで使用可）'],
+    shortcuts: ['⌘', '0']
+  },
+  {
+    day: 9, tag: 'finder',
+    title: 'タグ機能でファイルを色分け管理',
+    body: 'Finder のタグ機能を使うと、プロジェクトやテーマ別にファイルを色分けして管理できます。フォルダ構造に関係なく横断的にファイルを探せるのが便利です。',
+    tips: ['ファイルを右クリック→タグ（色）を選択', 'Finder サイドバーのタグ名をクリックで一覧表示', 'タグに名前をつける：Finder→設定→タグ'],
+    shortcuts: []
+  },
+  {
+    day: 10, tag: 'ai',
+    title: 'Claude / ChatGPT をブラウザで使い始める',
+    body: 'AI チャットツールを日常的に使うと作業効率が劇的に変わります。まずは claude.ai または chatgpt.com をブックマークして、毎日何か1つ質問する習慣をつけましょう。',
+    tips: ['claude.ai にアクセス→無料で使える（要サインアップ）', '「○○の使い方を初心者向けに教えて」と質問してみる', '長い文章をコピー貼り付けして「要約して」と頼むと超便利'],
+    shortcuts: []
+  },
+  {
+    day: 11, tag: 'spotlight',
+    title: 'Spotlight でアプリを素早く切り替える',
+    body: '複数のアプリを同時に使っている時、Spotlight でアプリ名を打つのが最速の切り替え方法です。⌘+Tab でもアプリ切り替えできますが、Spotlight の方がアプリ名で直接指定できて確実です。',
+    tips: ['⌘+Tab を押し続け→タブで次のアプリへ', '⌘+Space→アプリ名入力→Enter で即起動/切り替え', '⌘+` で同じアプリの複数ウィンドウを切り替え'],
+    shortcuts: ['⌘', 'Tab']
+  },
+  {
+    day: 12, tag: 'dock',
+    title: 'ステージマネージャーでデスクトップを整理',
+    body: 'macOS Ventura 以降で使えるステージマネージャは、作業中のアプリを自動的に整理してくれる機能です。左側に最近使ったアプリのサムネイルが並び、クリックで切り替えられます。',
+    tips: ['コントロールセンター（右上）→ステージマネージャをON', '左端のサムネイルをクリックでアプリ切り替え', '複数アプリをグループ化して1つのステージにまとめられる'],
+    shortcuts: []
+  },
+  {
+    day: 13, tag: 'trackpad',
+    title: 'フォースクリックで「ちょっと調べる」を習慣に',
+    body: 'トラックパッドを強く押し込む「フォースクリック」で、単語の意味・住所のマップ・リンク先のプレビューなど、様々な情報をその場でプレビューできます。',
+    tips: ['テキストの単語をフォースクリック→辞書・Wikipedia が表示', 'URL をフォースクリック→リンク先をプレビュー', 'ファイルをフォースクリック→クイックルック'],
+    shortcuts: []
+  },
+  {
+    day: 14, tag: 'ai',
+    title: 'AI に Prompt（質問文）を上手に書くコツ①',
+    body: 'AI に聞く時は「誰が」「何を」「どのように」を明確にすると答えの質が上がります。今日からプロンプトに「私は Mac 初心者です。」という一文を冒頭につけるだけで回答が変わります。',
+    tips: ['悪い例：「Mac の使い方」', '良い例：「私は Mac 初心者です。トラックパッドの便利なジェスチャーを5つ教えてください。」', '役割を指定：「あなたは Mac の専門家です。〜を説明して」'],
+    shortcuts: []
+  },
+  {
+    day: 15, tag: 'finder',
+    title: 'Quick Look（スペースキー）を徹底活用',
+    body: 'Finder でファイルを選択してスペースキーを押すと、アプリを開かずにファイルの中身をプレビューできます。写真・PDF・動画・音声など多くの形式に対応。ファイル確認の時間が激減します。',
+    tips: ['ファイルを選択→スペースキー→プレビュー表示', '矢印キーで次のファイルへ移動しながら連続プレビュー', '⌘+Enter で実際のアプリで開く'],
+    shortcuts: ['Space']
+  },
+  {
+    day: 16, tag: 'spotlight',
+    title: 'Spotlight の「Web で調べる」を使い分ける',
+    body: 'Spotlight の検索結果で見つからない場合、下部に「Web で〇〇を検索」が表示されます。ブラウザを開かずに Spotlight から直接 Web 検索できるので、ちょっとした調べ物がスムーズです。',
+    tips: ['⌘+B で検索ワードをデフォルトブラウザで検索', '⌘+L で辞書を表示（英語の単語検索に便利）', '「天気 東京」と入力すると天気も確認できる'],
+    shortcuts: ['⌘', 'B']
+  },
+  {
+    day: 17, tag: 'ai',
+    title: 'Safari の AI 機能「Highlights」を使う',
+    body: 'macOS Sequoia / Safari 18 以降、Safari に AI 機能「Highlights」が追加されました。ウェブページを読んでいる時に重要な情報・連絡先・地図などを自動で整理して表示します。',
+    tips: ['Safari のアドレスバー左のアイコンから Highlights を確認', '記事ページで自動的に著者・日付・関連情報が整理される', 'Siri に「このページを要約して」と頼む（iOS 18と連携）'],
+    shortcuts: []
+  },
+  {
+    day: 18, tag: 'dock',
+    title: 'Dock のアプリに「スタック」を追加する',
+    body: 'Dock にはアプリだけでなく、フォルダを「スタック」として追加できます。よく使うフォルダ（ダウンロード・書類など）をワンクリックでアクセスできるようにしましょう。',
+    tips: ['Finder からフォルダを Dock の右側（区切り線の右）にドラッグ', 'スタックをクリックするとファン状にファイルが広がる', 'スタックを右クリックで「格子状表示」などに変更可'],
+    shortcuts: []
+  },
+  {
+    day: 19, tag: 'trackpad',
+    title: 'スクロールの細かい設定を最適化する',
+    body: 'トラックパッドのスクロール速度や方向が合わない場合、システム設定で細かく調整できます。特に「スクロールの速度」は個人の好みが大きく分かれるので、自分好みに設定しましょう。',
+    tips: ['システム設定→アクセシビリティ→ポインタコントロール→スクロール速度', 'スクロール方向：システム設定→トラックパッド→ナチュラルのON/OFF', 'マジックマウス使用時は別途マウス設定が必要'],
+    shortcuts: []
+  },
+  {
+    day: 20, tag: 'ai',
+    title: 'AI に画像を読み取らせる（マルチモーダル活用）',
+    body: 'Claude や ChatGPT-4o は画像を「見て」理解できます。スクリーンショット・写真・図を AI に見せて「何が写っているか説明して」「この表のデータを文章にして」などと依頼できます。',
+    tips: ['claude.ai でファイルアイコンをクリックして画像を添付', '「このエラー画面を見て解決策を教えて」と Mac のスクショを送る', 'レシートや領収書の写真を送って「金額を合計して」も便利'],
+    shortcuts: []
+  },
+  {
+    day: 21, tag: 'finder',
+    title: 'スマートフォルダで自動ファイル分類',
+    body: '「スマートフォルダ」は条件に合うファイルを自動で一覧表示するバーチャルフォルダです。「過去7日以内に編集したPDF」などを自動収集してくれます。',
+    tips: ['Finder メニュー→ファイル→新規スマートフォルダ', '右上の「+」で条件を追加（種類・日付・タグなど）', 'サイドバーに保存して毎日確認フォルダとして活用'],
+    shortcuts: []
+  },
+  {
+    day: 22, tag: 'spotlight',
+    title: 'Spotlight でシステム設定を直接開く',
+    body: '「○○の設定がしたい」と思った時、システム設定のどこにあるかわからないことがあります。Spotlight に「バッテリー」「WiFi」「通知」などと入力すると、そのページへ直接ジャンプできます。',
+    tips: ['Spotlight→「通知」→通知の設定が直接開く', 'Spotlight→「バッテリー」→バッテリー設定へ', 'Spotlight→「ディスプレイ」→表示設定へ'],
+    shortcuts: ['⌘', 'Space']
+  },
+  {
+    day: 23, tag: 'ai',
+    title: 'AI に Prompt を上手に書くコツ②：出力形式を指定',
+    body: 'AI に回答の「形式」を指定すると、使いやすい答えが返ってきます。「箇条書きで」「表形式で」「ステップバイステップで」などを加えるだけで劇的に見やすくなります。',
+    tips: ['「〜を5つの箇条書きにして」→リスト形式で回答', '「ステップバイステップで説明して」→手順が明確になる', '「初心者にもわかる言葉で」→専門用語なしで回答'],
+    shortcuts: []
+  },
+  {
+    day: 24, tag: 'dock',
+    title: 'メニューバーをカスタマイズして情報を管理',
+    body: '画面右上のメニューバーには様々な情報が集約されています。不要なアイコンを整理して、天気・バッテリー・時刻などを一目で確認できるようにしましょう。',
+    tips: ['メニューバーアイコンを⌘を押しながらドラッグで並び替え', '⌘を押しながらアイコンをメニューバー外にドラッグで削除', 'システム設定→コントロールセンターでアイコン管理'],
+    shortcuts: []
+  },
+  {
+    day: 25, tag: 'trackpad',
+    title: 'アクセシビリティのポインタ設定でより快適に',
+    body: '標準設定が使いにくいと感じる場合、アクセシビリティのポインタ設定を調整しましょう。ポインタの大きさ・色・速度を変えることで、特に小さい画面での作業が快適になります。',
+    tips: ['システム設定→アクセシビリティ→ディスプレイ→ポインタ', 'ポインタのサイズを少し大きくすると視認性UP', '揺らすと大きくなる機能（ポインタを振って見つける）をONに'],
+    shortcuts: []
+  },
+  {
+    day: 26, tag: 'ai',
+    title: 'Siri を実用的に活用する7つの使い方',
+    body: 'Siri は「おやすみモードに設定して」「タイマー10分」「今日の予定は？」など日常業務の補助に使えます。画面から目を離せない時こそ Siri が便利です。',
+    tips: ['⌘+Space 長押し または「ヘイSiri」で起動', '「○時にリマインダーを設定して」→カレンダー不要', '「このファイルを〇〇フォルダに移動して」も OK（iOS連携時）'],
+    shortcuts: []
+  },
+  {
+    day: 27, tag: 'finder',
+    title: 'Finder の「ギャラリー表示」で写真を整理',
+    body: 'Finder には複数の表示モードがあります。写真フォルダを「ギャラリー表示」にすると、大きなサムネイルで写真を確認しながら整理できます。右パネルに詳細情報も表示されます。',
+    tips: ['⌘+4 でギャラリー表示に切り替え', '右パネルに撮影日・カメラ情報（EXIFデータ）が表示', '⌘+1〜4 で各表示モードを素早く切り替え'],
+    shortcuts: ['⌘', '4']
+  },
+  {
+    day: 28, tag: 'ai',
+    title: 'AI で英語メールを日本語で書く→翻訳する',
+    body: '海外との連絡で英文メールが必要な時、日本語で書いた内容を AI に英訳してもらう方法が便利です。「ビジネスメールのトーンで英訳して」と依頼すると自然な英語になります。',
+    tips: ['日本語で内容を書く→AI に「ビジネスメールとして英訳して」', '「もっとフォーマルに」「カジュアルに」と調整依頼', '英語メールを受け取ったら「わかりやすい日本語に訳して」'],
+    shortcuts: []
+  },
+  {
+    day: 29, tag: 'spotlight',
+    title: 'Spotlight の検索範囲をカスタマイズ',
+    body: 'Spotlight はデフォルトでほぼ全てを検索しますが、不要な検索対象を除外することで結果がスッキリします。また検索が遅い場合は除外設定で高速化できます。',
+    tips: ['システム設定→Siriと Spotlight→検索結果で種類を選択', '「提案」をOFFにするとローカルのみ検索して高速化', '特定のフォルダを除外：Spotlight設定→プライバシー'],
+    shortcuts: []
+  },
+  {
+    day: 30, tag: 'ai',
+    title: '30日間おめでとう！次のステップへ',
+    body: '30日間、毎日1つのレッスンを続けてきました。今やあなたは Spotlight・トラックパッド・Finder・Dock・Apple Intelligence の基本を習得しています。次は Shortcuts（ショートカットアプリ）や自動化など、中級者向けのテーマに挑戦しましょう！',
+    tips: ['Shortcuts アプリで繰り返し作業を自動化', 'iCloud Drive で iPhone/Mac のファイルを共有', 'Mac App Store で便利アプリを探してみよう'],
+    shortcuts: []
+  }
+];
+
+// =============================================
+// ▼ ここから下は動作ロジック（変更不要）
+// =============================================
+
+function getJST() {
+  const now = new Date();
+  return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+}
+
+function getTodayLesson() {
+  const jst = getJST();
+  const msPerDay = 86400000;
+  const diff = Math.floor((jst - START_DATE) / msPerDay);
+  const idx = Math.min(Math.max(diff, 0), LESSONS.length - 1);
+  return { lesson: LESSONS[idx], idx };
+}
+
+function getAvailableCount() {
+  const jst = getJST();
+  const nowHour = jst.getHours();
+  let daysPassed = Math.floor((jst - START_DATE) / 86400000);
+  if (nowHour < 5) daysPassed -= 1;
+  return Math.min(Math.max(daysPassed + 1, 1), LESSONS.length);
+}
+
+function tagLabel(t) {
+  const map = { trackpad: 'トラックパッド', spotlight: 'Spotlight', dock: 'Dock・UI', ai: 'AI活用', finder: 'Finder' };
+  return map[t] || t;
+}
+
+function renderToday() {
+  const jst = getJST();
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  document.getElementById('dayNum').textContent = jst.getDate();
+  document.getElementById('dateStr').textContent =
+    jst.getFullYear() + '/' + String(jst.getMonth() + 1).padStart(2, '0') + '/' + String(jst.getDate()).padStart(2, '0') + ' (' + days[jst.getDay()] + ')';
+
+  const { lesson } = getTodayLesson();
+  const available = getAvailableCount();
+
+  document.getElementById('statDay').textContent = lesson.day;
+  document.getElementById('statDone').textContent = available;
+  document.getElementById('prog').style.width = Math.round(lesson.day / 30 * 100) + '%';
+  document.getElementById('prog2').style.width = Math.round(available / 30 * 100) + '%';
+
+  document.getElementById('lessonNum').textContent = 'DAY ' + String(lesson.day).padStart(2, '0');
+  document.getElementById('lessonTag').textContent = tagLabel(lesson.tag);
+  document.getElementById('lessonTitle').textContent = lesson.title;
+  document.getElementById('lessonBody').textContent = lesson.body;
+
+  const tipsList = document.getElementById('tipsList');
+  tipsList.innerHTML = lesson.tips.map(t =>
+    '<div class="tip-item"><span class="tip-bullet">▸</span><span>' + t + '</span></div>'
+  ).join('');
+
+  const sArea = document.getElementById('shortcutsArea');
+  if (lesson.shortcuts && lesson.shortcuts.length) {
+    sArea.innerHTML = '<div class="shortcut-row" style="margin-top:.6rem;align-items:center;font-size:11px;color:var(--text3)">ショートカット：' +
+      lesson.shortcuts.map(k => '<span class="kbd">' + k + '</span>').join('<span style="color:var(--text3);font-size:10px;margin:0 2px">+</span>') + '</div>';
+  } else {
+    sArea.innerHTML = '';
+  }
+}
+
+let currentFilter = 'all';
+
+function filterArchive(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderArchive();
+}
+
+function renderArchive() {
+  const available = getAvailableCount();
+  const todayDay = getTodayLesson().lesson.day;
+  const list = document.getElementById('archiveList');
+  const filtered = LESSONS.filter(l => currentFilter === 'all' || l.tag === currentFilter);
+
+  let html = '';
+  filtered.forEach(l => {
+    if (l.day === todayDay) return;
+    const unlocked = l.day < available;
+    html += '<div class="archive-item" id="item-' + l.day + '" onclick="toggleItem(' + l.day + ',' + unlocked + ')">'
+      + '<span class="arc-day">Day ' + String(l.day).padStart(2, '0') + '</span>'
+      + '<span class="arc-tag ' + l.tag + '">' + tagLabel(l.tag) + '</span>'
+      + '<span class="arc-title">' + l.title + '</span>'
+      + '<span class="arc-expand">' + (unlocked ? '∨' : '🔒') + '</span>'
+      + '</div>'
+      + '<div class="arc-body" id="body-' + l.day + '">'
+      + (unlocked
+        ? l.body + '<div style="margin-top:.5rem;font-size:.82rem;color:var(--text3)">' + l.tips.map(t => '▸ ' + t).join('<br>') + '</div>'
+        : '<span style="font-style:italic">🔒 このレッスンはまだ解放されていません（朝5時に解放）</span>')
+      + '</div>';
+  });
+
+  list.innerHTML = html || '<div style="color:var(--text3);font-size:.88rem;text-align:center;padding:1rem">このカテゴリのアーカイブはありません</div>';
+}
+
+function toggleItem(day, unlocked) {
+  const item = document.getElementById('item-' + day);
+  const body = document.getElementById('body-' + day);
+  const isExp = item.classList.contains('expanded');
+
+  document.querySelectorAll('.archive-item.expanded').forEach(el => {
+    el.classList.remove('expanded');
+    const b = document.getElementById('body-' + el.id.replace('item-', ''));
+    if (b) b.style.display = 'none';
+  });
+
+  if (!isExp) {
+    item.classList.add('expanded');
+    body.style.display = 'block';
+  }
+}
+
+renderToday();
+renderArchive();
+</script>
+</body>
+</html>
