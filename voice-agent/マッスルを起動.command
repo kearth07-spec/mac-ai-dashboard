@@ -12,6 +12,11 @@ swift build -c release
 # 動いている古い版を止める（旧名 Orrery.app も）
 pkill -f "Muscle.app/Contents/MacOS/Muscle" 2>/dev/null || true
 pkill -f "Orrery.app/Contents/MacOS/Orrery" 2>/dev/null || true
+# 止まりきる前に開くと「error -600」で開けないので、終わるまで待つ（最大5秒）
+for _ in {1..25}; do
+  pgrep -f "Muscle.app/Contents/MacOS/Muscle|Orrery.app/Contents/MacOS/Orrery" >/dev/null || break
+  sleep 0.2
+done
 rm -rf "$HOME/Applications/Orrery.app"
 
 mkdir -p "$HOME/Applications"
@@ -32,4 +37,5 @@ else
 fi
 
 echo "起動します: $APP"
-open "$APP"
+# まれに開けないことがあるので、少し待ってからもう一度試す
+open "$APP" 2>/dev/null || { sleep 1.5; open "$APP"; }
