@@ -114,6 +114,8 @@ private struct GeneralTab: View {
 
     private var agentDescription: String {
         switch settings.agentTarget {
+        case .voiceChat:
+            return "話しかけた内容を Claude Code に聞き、答えを画面に表示して声で読み上げます。Claudeの有料プランでログイン済みの Claude Code が必要です（追加料金なし）。5分以内に続けて話すと、会話の続きとして答えます。読み上げ中に手を2回叩くと止まります。"
         case .claudeApp:
             return "Claudeデスクトップアプリで新しいチャットを開き、話した内容を送信します。キー入力にアクセシビリティの許可が必要です。"
         case .claudeCode:

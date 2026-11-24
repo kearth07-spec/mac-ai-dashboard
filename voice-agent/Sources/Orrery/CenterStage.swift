@@ -91,6 +91,8 @@ private struct CodexButton: View {
 
     var body: some View {
         VStack(spacing: 9) {
+            AnswerBubble(assistant: Services.shared.assistant)
+
             Button(action: toggle) {
                 HStack(spacing: 9) {
                     Image(systemName: icon)
@@ -185,6 +187,86 @@ private struct DialTimeline: View {
                                    by: HUDConfig.frameInterval(isLive: audio.isLive))) { _ in
                 OrreryDial(snapshot: audio.current, cpu: cpu, memory: memory)
             }
+        }
+    }
+}
+
+/// マッスルの答え。考え中・読み上げ中・失敗を表示し、答えの全文を読めるようにする。
+private struct AnswerBubble: View {
+    @ObservedObject var assistant: VoiceAssistant
+
+    var body: some View {
+        if !assistant.question.isEmpty || !assistant.answer.isEmpty || isFailed {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .bold))
+                    Text(status)
+                        .font(HUD.mono(9, .bold))
+                        .tracking(1.6)
+                    Spacer()
+                    if assistant.isBusy {
+                        Button("止める") { assistant.stop() }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                }
+                .foregroundStyle(isFailed ? HUD.warn : HUD.cyan)
+
+                if !assistant.question.isEmpty {
+                    Text("「\(assistant.question)」")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .lineLimit(2)
+                }
+                if case .failed(let message) = assistant.phase {
+                    Text(message)
+                        .font(.system(size: 12))
+                        .foregroundStyle(HUD.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if assistant.phase == .thinking {
+                    Text("考えています…（10〜20秒ほどかかることがあります）")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.7))
+                } else if !assistant.answer.isEmpty {
+                    ScrollView(.vertical, showsIndicators: true) {
+                        Text(assistant.answer)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.white)
+                            .lineSpacing(3)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 150)
+                }
+            }
+            .padding(14)
+            .frame(width: 520)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.55)))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(HUD.cyan.opacity(0.35), lineWidth: 1))
+        }
+    }
+
+    private var isFailed: Bool {
+        if case .failed = assistant.phase { return true }
+        return false
+    }
+
+    private var status: String {
+        switch assistant.phase {
+        case .thinking: return "THINKING"
+        case .speaking: return "SPEAKING"
+        case .failed: return "ERROR"
+        case .idle: return "MUSCLE"
+        }
+    }
+
+    private var icon: String {
+        switch assistant.phase {
+        case .thinking: return "ellipsis.bubble"
+        case .speaking: return "speaker.wave.2.fill"
+        case .failed: return "exclamationmark.triangle"
+        case .idle: return "bubble.left"
         }
     }
 }

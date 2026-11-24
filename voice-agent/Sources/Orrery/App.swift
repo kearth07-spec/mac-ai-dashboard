@@ -100,6 +100,10 @@ final class HUDWindowState: ObservableObject {
     func requestVoiceSession(command: String = "") {
         guard !sessionActive, !starting else { return }
         let target = HUDConfig.agentTarget
+        if target == .voiceChat {
+            askMuscle(command)
+            return
+        }
         let command = target.acceptsSpokenCommand ? command : ""
         starting = true
         AgentLauncher.start(target, command: command) { [weak self] outcome in
@@ -109,6 +113,21 @@ final class HUDWindowState: ObservableObject {
                 self.handle(outcome, target: target, command: command)
             }
         }
+    }
+
+    /// マッスル自身が答える。指示が無ければ（ボタンを押しただけなら）続けて話すのを待つ。
+    private func askMuscle(_ command: String) {
+        let services = Services.shared
+        guard !command.isEmpty else {
+            if services.wake.listenForCommand() {
+                show(nil)
+            } else {
+                show("右上の「音声OFF」を押して音声起動をONにすると、話しかけられます。")
+            }
+            return
+        }
+        show(nil)
+        services.assistant.ask(command)
     }
 
     private func handle(_ outcome: AgentLauncher.Outcome, target: AgentTarget, command: String) {

@@ -55,7 +55,7 @@ enum HUDConfig {
     static var agentTarget: AgentTarget {
         if let raw = value(for: "HUD_AGENT"), let target = AgentTarget(loose: raw) { return target }
         if let raw = stored("agentTarget"), let target = AgentTarget(rawValue: raw) { return target }
-        return .claudeApp
+        return .voiceChat
     }
 
     /// Claude Code を起動するフォルダ。HUD_CLAUDE_CODE_DIR か設定画面で変えられる（既定はホーム）。

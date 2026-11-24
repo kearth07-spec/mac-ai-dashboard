@@ -3,6 +3,8 @@ import ApplicationServices
 
 /// 声やボタンで起動するAI。設定画面（⌘,）の「一般 › 起動するAI」か HUD_AGENT で切り替える。
 enum AgentTarget: String, CaseIterable, Identifiable {
+    /// マッスル自身が答える。Claude Code に聞いて、答えを画面に出して読み上げる
+    case voiceChat
     /// Claudeデスクトップアプリ。新しいチャットを開き、話した内容をそのまま送る
     case claudeApp
     /// ターミナルで Claude Code を起動し、話した内容を最初の指示として渡す
@@ -15,6 +17,7 @@ enum AgentTarget: String, CaseIterable, Identifiable {
     /// 設定画面に出す名前
     var label: String {
         switch self {
+        case .voiceChat: return "マッスルと会話（声で答える）"
         case .claudeApp: return "Claudeアプリ"
         case .claudeCode: return "Claude Code（ターミナル）"
         case .codex: return "Codex（音声ライブ）"
@@ -24,6 +27,7 @@ enum AgentTarget: String, CaseIterable, Identifiable {
     /// HUDに出す短い名前
     var shortName: String {
         switch self {
+        case .voiceChat: return "MUSCLE"
         case .claudeApp: return "CLAUDE"
         case .claudeCode: return "CLAUDE CODE"
         case .codex: return "CODEX"
@@ -32,6 +36,7 @@ enum AgentTarget: String, CaseIterable, Identifiable {
 
     var buttonTitle: String {
         switch self {
+        case .voiceChat: return "マッスルに話す"
         case .claudeApp: return "CLAUDE と話す"
         case .claudeCode: return "CLAUDE CODE 起動"
         case .codex: return "CODEX と話す"
@@ -41,7 +46,7 @@ enum AgentTarget: String, CaseIterable, Identifiable {
     /// 音を拾う対象アプリの既定（HUD_AUDIO_APPS で上書き可）
     var audioKeyword: String {
         switch self {
-        case .claudeApp, .claudeCode: return "claude"
+        case .voiceChat, .claudeApp, .claudeCode: return "claude"
         case .codex: return "codex"
         }
     }
@@ -57,6 +62,7 @@ enum AgentTarget: String, CaseIterable, Identifiable {
     init?(loose raw: String) {
         let key = raw.lowercased().filter { $0.isLetter }
         switch key {
+        case "voice", "voicechat", "chat", "muscle": self = .voiceChat
         case "claude", "claudeapp", "claudedesktop": self = .claudeApp
         case "claudecode", "code", "cc": self = .claudeCode
         case "codex": self = .codex
@@ -94,6 +100,7 @@ enum AgentLauncher {
     static func start(_ target: AgentTarget, command: String,
                       completion: @escaping (Outcome) -> Void) {
         switch target {
+        case .voiceChat: completion(.started)   // マッスル自身が答えるので、外のアプリは開かない
         case .codex: startCodex(completion: completion)
         case .claudeApp: startClaudeApp(command: command, completion: completion)
         case .claudeCode: startClaudeCode(command: command, completion: completion)
@@ -103,6 +110,7 @@ enum AgentLauncher {
     /// セッションを終えたときに対象アプリを前面へ戻す
     static func activate(_ target: AgentTarget) {
         switch target {
+        case .voiceChat: break
         case .codex: open(bundleIdentifier: codexBundleIdentifier) { _ in }
         case .claudeApp: open(bundleIdentifier: claudeBundleIdentifier) { _ in }
         case .claudeCode:

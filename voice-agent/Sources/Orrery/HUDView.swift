@@ -20,7 +20,10 @@ final class Services {
     private func connectWakeWord() {
         let windowState = HUDWindowState.shared
         wake.onTrigger = { command in windowState.requestVoiceSession(command: command) }
-        wake.isSuppressed = { windowState.sessionActive || windowState.starting }
+        let assistant = self.assistant
+        wake.isSuppressed = { windowState.sessionActive || windowState.starting || assistant.isBusy }
+        // 読み上げ中に手拍子したら止める
+        wake.onClapWhileBusy = { assistant.stop() }
     }
 
     let system = SystemMonitor()
@@ -30,6 +33,7 @@ final class Services {
     let wake = WakeWordListener()
     let calendar = CalendarService()
     let breaks = BreakReminder()
+    let assistant = VoiceAssistant()
 }
 
 struct HUDView: View {

@@ -91,7 +91,7 @@ final class HUDSettings: ObservableObject {
         longitude = store.object(forKey: "longitude") as? Double ?? 139.7671
         tickersText = store.string(forKey: "tickers") ?? ""
         wakePhrasesText = store.string(forKey: "wakePhrases") ?? ""
-        agentTarget = AgentTarget(rawValue: store.string(forKey: "agentTarget") ?? "") ?? .claudeApp
+        agentTarget = AgentTarget(rawValue: store.string(forKey: "agentTarget") ?? "") ?? .voiceChat
         clapEnabled = store.object(forKey: "clapEnabled") as? Bool ?? true
         clapSensitivity = ClapDetector.Sensitivity(rawValue: store.string(forKey: "clapSensitivity") ?? "") ?? .medium
         claudeCodeDirectory = store.string(forKey: "claudeCodeDirectory") ?? ""
@@ -126,7 +126,7 @@ final class HUDSettings: ObservableObject {
         longitude = 139.7671
         tickersText = ""
         wakePhrasesText = ""
-        agentTarget = .claudeApp
+        agentTarget = .voiceChat
         clapEnabled = true
         clapSensitivity = .medium
         claudeCodeDirectory = ""

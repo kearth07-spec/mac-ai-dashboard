@@ -23,6 +23,8 @@ final class WakeWordListener: ObservableObject {
 
     /// 呼び出し側でAIの起動につなぐ。引数は合図のあとに話した内容（無ければ空文字）
     var onTrigger: ((String) -> Void)?
+    /// isSuppressed の間に手拍子されたとき（読み上げを止めるのに使う）
+    var onClapWhileBusy: (() -> Void)?
     /// セッション中は反応させない（Codexの声で自分が誤爆しないように）
     var isSuppressed: () -> Bool = { false }
 
@@ -233,8 +235,12 @@ final class WakeWordListener: ObservableObject {
 
     /// 「パンパン」と2回叩いたとき。合図の言葉を言ったのと同じ扱いにする。
     private func handleClap() {
-        guard HUDSettings.shared.clapEnabled, isListening, !isCapturing, !isSuppressed(),
-              Date().timeIntervalSince(lastTrigger) > Self.cooldown else { return }
+        guard HUDSettings.shared.clapEnabled, isListening, !isCapturing else { return }
+        if isSuppressed() {
+            onClapWhileBusy?()
+            return
+        }
+        guard Date().timeIntervalSince(lastTrigger) > Self.cooldown else { return }
         AudioSpectrum.log("wake: 手拍子を検出しました")
         lastTrigger = Date()
 
@@ -253,6 +259,23 @@ final class WakeWordListener: ObservableObject {
         restartTask()
         heard = "▶ 指示をどうぞ…"
         scheduleCaptureEnd()
+    }
+
+    /// ボタンから「話しかける」とき。手拍子と同じく、ここから先に話した内容を指示として聞く。
+    /// 聞き取りがOFFなら false を返す。
+    @discardableResult
+    func listenForCommand() -> Bool {
+        guard isListening else { return false }
+        guard !isCapturing else { return true }
+        lastTrigger = Date()
+        isCapturing = true
+        captureWhole = true
+        captureStarted = Date()
+        command = ""
+        restartTask()
+        heard = "▶ 指示をどうぞ…"
+        scheduleCaptureEnd()
+        return true
     }
 
     // MARK: - 指示の聞き取り
