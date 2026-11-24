@@ -8,6 +8,7 @@ enum PrivacySettings {
         case speechRecognition = "Privacy_SpeechRecognition"
         case accessibility = "Privacy_Accessibility"
         case automation = "Privacy_Automation"
+        case calendars = "Privacy_Calendars"
     }
 
     /// 許可の変更は再起動しないと反映されないので、その場で入れ替える

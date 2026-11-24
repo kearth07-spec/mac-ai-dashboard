@@ -6,6 +6,13 @@ struct Ticker: Identifiable, Hashable {
     var id: String { symbol }
 }
 
+/// 「よく使う指示」パネルのボタン1つぶん
+struct QuickCommand: Identifiable, Hashable {
+    let id: Int
+    let label: String
+    let prompt: String
+}
+
 /// 表示内容の設定。優先順は 環境変数 > 設定画面（UserDefaults） > 既定値。
 enum HUDConfig {
     /// 天気を出す地点（既定は東京）
@@ -77,6 +84,33 @@ enum HUDConfig {
         return raw.split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
+    }
+
+    /// 「よく使う指示」の既定。1行に「ボタン名|AIへの指示」
+    static let defaultQuickCommandsText = """
+    今日の段取り|今日やることを整理して、優先順位と時間割を提案してください。
+    Instagram投稿案|理学療法士・医療従事者向けのInstagram投稿ネタを5つ提案してください。それぞれ1枚目のタイトル案もつけてください。
+    note記事ネタ|医療介護職向けの有料note記事のテーマ案を5つ、想定読者と一緒に提案してください。
+    研修資料の骨子|新人〜中堅の理学療法士向け研修会の資料の骨子を作ってください。テーマはこれから伝えます。
+    Macの小ワザ|Mac初心者がすぐ使える便利な小ワザを1つ、手順つきで教えてください。
+    文章を整える|これから貼り付ける文章を、読みやすく自然な日本語に整えてください。
+    """
+
+    /// 「よく使う指示」のボタン。設定画面で書き換えられる。
+    static var quickCommands: [QuickCommand] {
+        let raw = stored("quickCommands") ?? defaultQuickCommandsText
+        return raw.split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .enumerated()
+            .map { index, line in
+                let parts = line.split(separator: "|", maxSplits: 1).map {
+                    $0.trimmingCharacters(in: .whitespaces)
+                }
+                let prompt = parts.count > 1 ? parts[1] : parts[0]
+                let label = parts.count > 1 ? parts[0] : String(prompt.prefix(14))
+                return QuickCommand(id: index, label: label, prompt: prompt)
+            }
     }
 
     /// 一致しても起動せずログだけ出す（合図の調整用）

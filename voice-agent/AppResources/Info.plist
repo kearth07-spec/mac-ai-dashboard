@@ -22,6 +22,10 @@
     <true/>
     <key>NSMicrophoneUsageDescription</key>
     <string>声でAI（Claude / Claude Code / Codex）を起動し、指示を聞き取るためにマイクを使います。</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>今日・明日の予定をダッシュボードに表示するために、カレンダーを読み取ります（書き換えません）。</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>今日・明日の予定をダッシュボードに表示するために、カレンダーを読み取ります（書き換えません）。</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>声で Claude Code を起動するために、ターミナルを操作します。</string>
     <key>NSSpeechRecognitionUsageDescription</key>

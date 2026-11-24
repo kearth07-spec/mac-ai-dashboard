@@ -197,7 +197,7 @@ struct OrreryApp: App {
 
     init() {
         // ウィンドウを開く前から（ログイン時の自動起動でも）声と手拍子を聞けるように、ここで用意する
-        Services.shared.connectWakeWord()
+        Services.shared.startBackground()
     }
 
     var body: some Scene {

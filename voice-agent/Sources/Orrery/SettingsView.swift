@@ -202,13 +202,37 @@ private struct PanelsTab: View {
     var body: some View {
         Form {
             Section("左の列") {
+                Toggle("今日のMac・AIレッスン", isOn: $settings.showLesson)
+                Toggle("休憩・姿勢リマインダー", isOn: $settings.showBreak)
                 Toggle("システム（CPU・メモリ・ストレージ）", isOn: $settings.showSystem)
                 Toggle("ネットワーク", isOn: $settings.showNetwork)
                 Toggle("Claudeの使用量", isOn: $settings.showUsage)
             }
             Section("右の列") {
                 Toggle("天気", isOn: $settings.showWeather)
+                Toggle("今日の予定（カレンダー）", isOn: $settings.showCalendar)
+                Toggle("よく使う指示", isOn: $settings.showCommands)
                 Toggle("株価・為替", isOn: $settings.showMarket)
+            }
+            Section("よく使う指示") {
+                TextEditor(text: Binding(
+                    get: { settings.quickCommandsText.isEmpty ? HUDConfig.defaultQuickCommandsText : settings.quickCommandsText },
+                    set: { settings.quickCommandsText = $0 }))
+                    .font(.system(.body, design: .monospaced))
+                    .frame(height: 130)
+                Text("1行に「ボタン名|AIへの指示」。押すと、設定中のAI（一般 › 起動するAI）にその指示を送ります。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("既定に戻す") { settings.quickCommandsText = "" }
+            }
+            Section("休憩・姿勢リマインダー") {
+                Stepper(value: $settings.breakMinutes, in: 15...120, step: 5) {
+                    Text("\(Int(settings.breakMinutes))分 続けて作業したら知らせる")
+                }
+                Toggle("時間になったら通知も出す", isOn: $settings.breakNotify)
+                Text("キーボードやトラックパッドを5分以上さわらなければ、休憩したとみなして数え直します。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("下部") {
                 Toggle("砂の帯（オーディオフロー）", isOn: $settings.showSand)

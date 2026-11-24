@@ -10,8 +10,14 @@ final class Services {
 
     private init() {}
 
-    /// 声と手拍子をAIの起動につなぐ。1回だけ呼ぶ。
-    func connectWakeWord() {
+    /// ウィンドウを閉じていても動かしておくもの（声・手拍子・休憩リマインダー）。1回だけ呼ぶ。
+    func startBackground() {
+        connectWakeWord()
+        breaks.start()
+    }
+
+    /// 声と手拍子をAIの起動につなぐ。
+    private func connectWakeWord() {
         let windowState = HUDWindowState.shared
         wake.onTrigger = { command in windowState.requestVoiceSession(command: command) }
         wake.isSuppressed = { windowState.sessionActive || windowState.starting }
@@ -22,6 +28,8 @@ final class Services {
     let market = MarketService()
     let usage = UsageService()
     let wake = WakeWordListener()
+    let calendar = CalendarService()
+    let breaks = BreakReminder()
 }
 
 struct HUDView: View {
@@ -42,18 +50,24 @@ struct HUDView: View {
                            wake: services.wake) {
                         Task {
                             await services.weather.refresh()
-                            await services.market.refresh()
+                            if settings.showMarket { await services.market.refresh() }
                             await services.usage.refresh()
+                            services.calendar.reload()
                         }
                     }
 
                     HStack(alignment: .top, spacing: 14) {
-                        if settings.showSystem || settings.showNetwork || settings.showUsage {
-                            VStack(spacing: 14) {
-                                if settings.showSystem { SystemPanel(system: services.system) }
-                                if settings.showNetwork { NetworkPanel(system: services.system) }
-                                if settings.showUsage { UsagePanel(usage: services.usage) }
-                                Spacer(minLength: 0)
+                        if settings.showLesson || settings.showBreak || settings.showSystem
+                            || settings.showNetwork || settings.showUsage {
+                            // 画面が低くて入りきらないときはスクロールできるようにする
+                            ScrollView(.vertical, showsIndicators: false) {
+                                VStack(spacing: 14) {
+                                    if settings.showLesson { LessonPanel() }
+                                    if settings.showBreak { BreakPanel(reminder: services.breaks) }
+                                    if settings.showSystem { SystemPanel(system: services.system) }
+                                    if settings.showNetwork { NetworkPanel(system: services.system) }
+                                    if settings.showUsage { UsagePanel(usage: services.usage) }
+                                }
                             }
                             .frame(width: leftWidth)
                         }
@@ -61,11 +75,22 @@ struct HUDView: View {
                         CenterColumn(system: services.system)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                        if settings.showWeather || settings.showMarket {
-                            VStack(spacing: 14) {
-                                if settings.showWeather { WeatherPanel(weather: services.weather) }
-                                if settings.showMarket { MarketPanel(market: services.market) }
-                                Spacer(minLength: 0)
+                        if settings.showWeather || settings.showCalendar || settings.showCommands
+                            || settings.showMarket {
+                            ScrollView(.vertical, showsIndicators: false) {
+                                VStack(spacing: 14) {
+                                    if settings.showWeather { WeatherPanel(weather: services.weather) }
+                                    if settings.showCalendar {
+                                        // あとから表示をONにしたときも読み込みを始める
+                                        CalendarPanel(calendar: services.calendar)
+                                            .task { services.calendar.start() }
+                                    }
+                                    if settings.showCommands { QuickCommandsPanel() }
+                                    if settings.showMarket {
+                                        MarketPanel(market: services.market)
+                                            .task { services.market.start() }
+                                    }
+                                }
                             }
                             .frame(width: rightWidth)
                         }
@@ -87,14 +112,13 @@ struct HUDView: View {
         .task {
             services.system.start()
             services.weather.start()
-            services.market.start()
             services.usage.start()
         }
         // 設定画面で地点や銘柄が変わったら取り直す
         .onReceive(settings.dataRefresh) { _ in
             Task {
                 await services.weather.refresh()
-                await services.market.refresh()
+                if settings.showMarket { await services.market.refresh() }
             }
         }
     }

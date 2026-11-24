@@ -44,6 +44,19 @@ final class HUDSettings: ObservableObject {
     @Published var showWeather: Bool { didSet { store.set(showWeather, forKey: "showWeather") } }
     @Published var showMarket: Bool { didSet { store.set(showMarket, forKey: "showMarket") } }
     @Published var showSand: Bool { didSet { store.set(showSand, forKey: "showSand") } }
+    @Published var showLesson: Bool { didSet { store.set(showLesson, forKey: "showLesson") } }
+    @Published var showBreak: Bool { didSet { store.set(showBreak, forKey: "showBreak") } }
+    @Published var showCalendar: Bool { didSet { store.set(showCalendar, forKey: "showCalendar") } }
+    @Published var showCommands: Bool { didSet { store.set(showCommands, forKey: "showCommands") } }
+
+    // MARK: アシスタント
+
+    /// 1行に「ボタン名|AIへの指示」。空なら既定
+    @Published var quickCommandsText: String { didSet { store.set(quickCommandsText, forKey: "quickCommands") } }
+    /// 何分続けて作業したら休憩を促すか
+    @Published var breakMinutes: Double { didSet { store.set(breakMinutes, forKey: "breakMinutes") } }
+    /// 休憩の時間になったら通知を出すか
+    @Published var breakNotify: Bool { didSet { store.set(breakNotify, forKey: "breakNotify") } }
 
     // MARK: 負荷
 
@@ -85,11 +98,18 @@ final class HUDSettings: ObservableObject {
         theme = HUDTheme(rawValue: store.string(forKey: "theme") ?? "") ?? .arc
         customAccentHex = store.string(forKey: "customAccent") ?? "#5CDBFF"
         showSystem = store.object(forKey: "showSystem") as? Bool ?? true
-        showNetwork = store.object(forKey: "showNetwork") as? Bool ?? true
+        showNetwork = store.object(forKey: "showNetwork") as? Bool ?? false
         showUsage = store.object(forKey: "showUsage") as? Bool ?? true
         showWeather = store.object(forKey: "showWeather") as? Bool ?? true
-        showMarket = store.object(forKey: "showMarket") as? Bool ?? true
+        showMarket = store.object(forKey: "showMarket") as? Bool ?? false
         showSand = store.object(forKey: "showSand") as? Bool ?? true
+        showLesson = store.object(forKey: "showLesson") as? Bool ?? true
+        showBreak = store.object(forKey: "showBreak") as? Bool ?? true
+        showCalendar = store.object(forKey: "showCalendar") as? Bool ?? true
+        showCommands = store.object(forKey: "showCommands") as? Bool ?? true
+        quickCommandsText = store.string(forKey: "quickCommands") ?? ""
+        breakMinutes = store.object(forKey: "breakMinutes") as? Double ?? 50
+        breakNotify = store.object(forKey: "breakNotify") as? Bool ?? true
         grainCount = Double(store.object(forKey: "grainCount") as? Int ?? 1100)
         activeFPS = store.object(forKey: "activeFPS") as? Double ?? 30
         idleFPS = store.object(forKey: "idleFPS") as? Double ?? 12
@@ -113,11 +133,18 @@ final class HUDSettings: ObservableObject {
         theme = .arc
         customAccentHex = "#5CDBFF"
         showSystem = true
-        showNetwork = true
+        showNetwork = false
         showUsage = true
         showWeather = true
-        showMarket = true
+        showMarket = false
         showSand = true
+        showLesson = true
+        showBreak = true
+        showCalendar = true
+        showCommands = true
+        quickCommandsText = ""
+        breakMinutes = 50
+        breakNotify = true
         grainCount = 1100
         activeFPS = 30
         idleFPS = 12
