@@ -19,6 +19,11 @@ final class HUDSettings: ObservableObject {
     @Published var tickersText: String { didSet { store.set(tickersText, forKey: "tickers"); bumpData() } }
     /// カンマ区切り。キーはHUDConfigが昔から読んでいる "wakePhrases" を使い続ける
     @Published var wakePhrasesText: String { didSet { store.set(wakePhrasesText, forKey: "wakePhrases") } }
+    /// 「パンパン」と2回手を叩いて起動する
+    @Published var clapEnabled: Bool { didSet { store.set(clapEnabled, forKey: "clapEnabled") } }
+    @Published var clapSensitivity: ClapDetector.Sensitivity {
+        didSet { store.set(clapSensitivity.rawValue, forKey: "clapSensitivity") }
+    }
     /// 声やボタンで起動するAI
     @Published var agentTarget: AgentTarget { didSet { store.set(agentTarget.rawValue, forKey: "agentTarget") } }
     /// Claude Code を起動するフォルダ。空文字はホーム
@@ -74,6 +79,8 @@ final class HUDSettings: ObservableObject {
         tickersText = store.string(forKey: "tickers") ?? ""
         wakePhrasesText = store.string(forKey: "wakePhrases") ?? ""
         agentTarget = AgentTarget(rawValue: store.string(forKey: "agentTarget") ?? "") ?? .claudeApp
+        clapEnabled = store.object(forKey: "clapEnabled") as? Bool ?? true
+        clapSensitivity = ClapDetector.Sensitivity(rawValue: store.string(forKey: "clapSensitivity") ?? "") ?? .medium
         claudeCodeDirectory = store.string(forKey: "claudeCodeDirectory") ?? ""
         theme = HUDTheme(rawValue: store.string(forKey: "theme") ?? "") ?? .arc
         customAccentHex = store.string(forKey: "customAccent") ?? "#5CDBFF"
@@ -100,6 +107,8 @@ final class HUDSettings: ObservableObject {
         tickersText = ""
         wakePhrasesText = ""
         agentTarget = .claudeApp
+        clapEnabled = true
+        clapSensitivity = .medium
         claudeCodeDirectory = ""
         theme = .arc
         customAccentHex = "#5CDBFF"

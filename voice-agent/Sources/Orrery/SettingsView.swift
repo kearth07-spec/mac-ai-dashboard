@@ -90,6 +90,21 @@ private struct GeneralTab: View {
                 EnvOverrideNote(keys: ["HUD_WAKE_PHRASES"])
             }
 
+            Section("手を叩いて起動") {
+                Toggle("「パンパン」と2回手を叩いたら起動する", isOn: $settings.clapEnabled)
+                if settings.clapEnabled {
+                    Picker("感度", selection: $settings.clapSensitivity) {
+                        ForEach(ClapDetector.Sensitivity.allCases) { level in
+                            Text(level.label).tag(level)
+                        }
+                    }
+                }
+                Text("上部右の「音声起動」がONのときに使えます。叩いたあとに話した内容が指示になります（Claude系）。"
+                     + "物音で誤作動するときは感度を下げ、反応しないときは上げてください。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section {
                 Button("すべて既定に戻す", role: .destructive) { settings.resetAll() }
             }

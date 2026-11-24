@@ -1,4 +1,5 @@
 import AVFoundation
+import Combine
 import Speech
 import SwiftUI
 
@@ -47,9 +48,19 @@ final class WakeWordListener: ObservableObject {
     private var command = ""
     private var captureStarted = Date.distantPast
     private var captureTimer: Timer?
+    /// 手拍子で始めた聞き取り（合図の言葉が無いので、聞き取った文がまるごと指示になる）
+    private var captureWhole = false
+    private let clap = ClapDetector()
+    private var cancellables: Set<AnyCancellable> = []
 
     init() {
         recognizer = SFSpeechRecognizer(locale: Locale(identifier: HUDConfig.wakePhraseLocale))
+        clap.onDoubleClap = { [weak self] in
+            Task { @MainActor in self?.handleClap() }
+        }
+        HUDSettings.shared.$clapSensitivity
+            .sink { [clap] level in clap.set(sensitivity: level) }
+            .store(in: &cancellables)
         enabled = UserDefaults.standard.bool(forKey: Self.preferenceKey)
         if enabled { start() }
     }
@@ -106,8 +117,9 @@ final class WakeWordListener: ObservableObject {
                 }
                 AudioSpectrum.log("wake: input format \(format.sampleRate)Hz \(format.channelCount)ch")
                 box.prepare(from: format)
-                input.installTap(onBus: 0, bufferSize: 2048, format: format) { [box] buffer, _ in
+                input.installTap(onBus: 0, bufferSize: 2048, format: format) { [box, clap] buffer, _ in
                     box.append(buffer)
+                    clap.process(buffer)
                 }
                 tapInstalled = true
             }
@@ -217,10 +229,38 @@ final class WakeWordListener: ObservableObject {
         updateCapture(transcript)
     }
 
+    // MARK: - 手拍子
+
+    /// 「パンパン」と2回叩いたとき。合図の言葉を言ったのと同じ扱いにする。
+    private func handleClap() {
+        guard HUDSettings.shared.clapEnabled, isListening, !isCapturing, !isSuppressed(),
+              Date().timeIntervalSince(lastTrigger) > Self.cooldown else { return }
+        AudioSpectrum.log("wake: 手拍子を検出しました")
+        lastTrigger = Date()
+
+        guard HUDConfig.agentTarget.acceptsSpokenCommand else {
+            restartTask()
+            guard !HUDConfig.wakeDryRun else { return }
+            onTrigger?("")
+            return
+        }
+
+        // 手拍子のあとに話した内容を指示として受け取る。認識を貼り替えて、ここから先だけを聞く。
+        isCapturing = true
+        captureWhole = true
+        captureStarted = Date()
+        command = ""
+        restartTask()
+        heard = "▶ 指示をどうぞ…"
+        scheduleCaptureEnd()
+    }
+
     // MARK: - 指示の聞き取り
 
     private func updateCapture(_ transcript: String) {
-        if let rest = Self.textAfterWakePhrase(in: transcript) {
+        if captureWhole {
+            command = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if let rest = Self.textAfterWakePhrase(in: transcript) {
             command = rest
         }
         heard = command.isEmpty ? "▶ 指示をどうぞ…" : "▶ \(command.suffix(38))"
@@ -261,6 +301,7 @@ final class WakeWordListener: ObservableObject {
         captureTimer?.invalidate()
         captureTimer = nil
         isCapturing = false
+        captureWhole = false
         command = ""
     }
 
