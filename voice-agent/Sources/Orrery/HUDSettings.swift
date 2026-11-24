@@ -55,6 +55,10 @@ final class HUDSettings: ObservableObject {
     @Published var quickCommandsText: String { didSet { store.set(quickCommandsText, forKey: "quickCommands") } }
     /// 何分続けて作業したら休憩を促すか
     @Published var breakMinutes: Double { didSet { store.set(breakMinutes, forKey: "breakMinutes") } }
+    /// 読み上げの速さ（0.4〜0.7くらい。Apple の標準は0.5）
+    @Published var speechRate: Double { didSet { store.set(speechRate, forKey: "speechRate") } }
+    /// 「マッスルと会話」で使うモデル（haiku / sonnet / opus）
+    @Published var assistantModel: String { didSet { store.set(assistantModel, forKey: "assistantModel") } }
     /// 休憩の時間になったら通知を出すか
     @Published var breakNotify: Bool { didSet { store.set(breakNotify, forKey: "breakNotify") } }
 
@@ -110,6 +114,8 @@ final class HUDSettings: ObservableObject {
         quickCommandsText = store.string(forKey: "quickCommands") ?? ""
         breakMinutes = store.object(forKey: "breakMinutes") as? Double ?? 50
         breakNotify = store.object(forKey: "breakNotify") as? Bool ?? true
+        speechRate = store.object(forKey: "speechRate") as? Double ?? 0.58
+        assistantModel = store.string(forKey: "assistantModel") ?? "sonnet"
         grainCount = Double(store.object(forKey: "grainCount") as? Int ?? 1100)
         activeFPS = store.object(forKey: "activeFPS") as? Double ?? 30
         idleFPS = store.object(forKey: "idleFPS") as? Double ?? 12
@@ -145,6 +151,8 @@ final class HUDSettings: ObservableObject {
         quickCommandsText = ""
         breakMinutes = 50
         breakNotify = true
+        speechRate = 0.58
+        assistantModel = "sonnet"
         grainCount = 1100
         activeFPS = 30
         idleFPS = 12

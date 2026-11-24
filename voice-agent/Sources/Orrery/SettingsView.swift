@@ -51,6 +51,23 @@ private struct GeneralTab: View {
                 Text(agentDescription)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if settings.agentTarget == .voiceChat {
+                    Picker("答えるモデル", selection: $settings.assistantModel) {
+                        Text("Haiku（いちばん速い）").tag("haiku")
+                        Text("Sonnet（速さと賢さのバランス）").tag("sonnet")
+                        Text("Opus（いちばん賢いが遅い）").tag("opus")
+                    }
+                    Slider(value: $settings.speechRate, in: 0.4...0.75) {
+                        Text("話す速さ")
+                    } minimumValueLabel: {
+                        Text("ゆっくり")
+                    } maximumValueLabel: {
+                        Text("速い")
+                    }
+                    Text("モデルの変更は、次に新しい会話を始めたとき（アプリの再起動か、10分以上あけたあと）から反映されます。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if settings.agentTarget == .claudeCode {
                     HStack {
                         TextField("作業フォルダ", text: $settings.claudeCodeDirectory, prompt: Text("~（ホーム）"))

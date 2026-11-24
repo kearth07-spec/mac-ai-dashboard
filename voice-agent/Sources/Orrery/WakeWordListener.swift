@@ -1,3 +1,4 @@
+import AppKit
 import AVFoundation
 import Combine
 import Speech
@@ -31,11 +32,11 @@ final class WakeWordListener: ObservableObject {
     var isSuppressed: () -> Bool = { false }
 
     private static let preferenceKey = "wakeWordEnabled"
-    private static let cooldown: TimeInterval = 6
+    private static let cooldown: TimeInterval = 3
     /// 指示を話し終えたとみなす無音の長さ
-    private static let commandSilence: TimeInterval = 1.6
+    private static let commandSilence: TimeInterval = 1.0
     /// 合図だけ言って黙っているとき、指示を待つ長さ
-    private static let commandWait: TimeInterval = 5
+    private static let commandWait: TimeInterval = 4
     /// 指示を聞き取る最大の長さ
     private static let commandLimit: TimeInterval = 20
 
@@ -215,6 +216,7 @@ final class WakeWordListener: ObservableObject {
         guard Self.textAfterWakePhrase(in: transcript) != nil else { return }
 
         AudioSpectrum.log("wake: 合図に一致しました")
+        Self.playCue()
         if !HUDConfig.wakeDryRun { onWake?() }
         lastTrigger = Date()
 
@@ -245,6 +247,7 @@ final class WakeWordListener: ObservableObject {
         }
         guard Date().timeIntervalSince(lastTrigger) > Self.cooldown else { return }
         AudioSpectrum.log("wake: 手拍子を検出しました")
+        Self.playCue()
         if !HUDConfig.wakeDryRun { onWake?() }
         lastTrigger = Date()
 
@@ -368,6 +371,11 @@ final class WakeWordListener: ObservableObject {
         let rest = transcript[ends[best]...]
             .drop { $0.unicodeScalars.allSatisfy { leading.contains($0) } }
         return String(rest).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 「聞こえたよ」の合図に短い音を鳴らす（反応したかどうかがすぐわかるように）
+    private static func playCue() {
+        NSSound(named: NSSound.Name("Tink"))?.play()
     }
 
     /// 空白・記号・全角半角・ひらがなカタカナの違いを吸収して比べる

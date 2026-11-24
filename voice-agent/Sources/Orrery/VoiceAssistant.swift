@@ -1,8 +1,14 @@
+import AppKit
 import AVFoundation
 import Foundation
 
-/// 話しかけた内容を Claude Code（`claude -p`）に渡し、返ってきた答えを画面に出して読み上げる。
+/// 話しかけた内容を Claude Code に渡し、返ってきた答えを画面に出して読み上げる。
 /// Claude の有料プランにログイン済みの Claude Code を使うので、APIキーや追加料金は要らない。
+///
+/// 速さのための工夫:
+/// - Claude Code を1回だけ起動して開いたままにし（--input-format stream-json）、質問ごとの起動待ちをなくす
+/// - 答えを1文字ずつ受け取り（--include-partial-messages）、1文できるたびにすぐ読み上げ始める
+/// - claude の場所はアプリ起動時に1度だけ調べておく
 @MainActor
 final class VoiceAssistant: NSObject, ObservableObject {
     enum Phase: Equatable {
@@ -19,87 +25,215 @@ final class VoiceAssistant: NSObject, ObservableObject {
     /// 考え中・読み上げ中は、声や手拍子に反応させない（自分の声を拾わないように）
     var isBusy: Bool { phase == .thinking || phase == .speaking }
 
-    /// 前の質問からこの秒数以内なら、会話の続きとして扱う
-    private static let followUpWindow: TimeInterval = 5 * 60
-    private static let timeout: TimeInterval = 120
+    /// 最後の質問からこれだけ空いたら、新しい会話として始め直す
+    private static let freshConversationAfter: TimeInterval = 10 * 60
+    /// 返事が始まらないときに打ち切る秒数
+    private static let timeout: TimeInterval = 90
 
     private static let persona = """
     あなたは音声アシスタント「マッスル」です。答えはそのまま音声で読み上げられます。
-    日本語の話し言葉で、まず結論を2〜4文で短く答えてください。
+    日本語の話し言葉で、まず結論を1〜3文で短く答えてください。前置きやあいさつは不要です。
     箇条書き・見出し・記号・Markdown・URL・絵文字は使わないでください。
-    調べないとわからないこと（天気・ニュースなど）は、ウェブ検索を使って答えてください。
+    調べないとわからないこと（天気・ニュースなど）だけ、ウェブ検索を使ってください。
     """
 
     private let synthesizer = AVSpeechSynthesizer()
-    private var process: Process?
+    private var session: ClaudeSession?
     private var lastAsked = Date.distantPast
-    private var generation = 0
+
+    /// 送った質問の数と、答え終わった数。いま流れてきている答えが何番目の質問のものかを知るのに使う
+    private var sentTurns = 0
+    private var finishedTurns = 0
+    /// 画面と読み上げに出す質問の番号（止めたら0にして、残りの答えは捨てる）
+    private var activeTurn = 0
+    /// まだ読み上げていない、文の途中までの答え
+    private var pendingSpeech = ""
+    private var spokeAnything = false
 
     override init() {
         super.init()
         synthesizer.delegate = self
     }
 
-    // MARK: - 質問
-
-    func ask(_ text: String) {
-        let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty else {
-            question = ""
-            answer = "聞き取れませんでした。もう一度話しかけてください。"
-            speak("聞き取れませんでした")
-            return
-        }
-        stop()
-        generation += 1
-        let current = generation
-        question = prompt
-        answer = ""
-        phase = .thinking
-
-        let continues = Date().timeIntervalSince(lastAsked) < Self.followUpWindow
-        lastAsked = Date()
-        AudioSpectrum.log("assistant: Claude Code に質問（\(prompt.count)文字、続き=\(continues)）")
-
-        run(prompt: prompt, continues: continues) { [weak self] result in
+    /// アプリ起動時に呼ぶ。claude の場所を調べ、会話の準備をしておく（最初の質問が速くなる）
+    func warmUp() {
+        ClaudeLocator.resolve { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let self, current == self.generation else { return }
-                self.process = nil
-                switch result {
-                case .success(let output):
-                    self.answer = output
-                    self.speak(Self.speakable(output))
-                case .failure(let error):
-                    AudioSpectrum.log("assistant: 失敗 \(error.message)")
-                    self.answer = ""
-                    self.phase = .failed(error.message)
-                    self.speak(error.spoken)
-                }
+                guard let self, HUDConfig.agentTarget == .voiceChat else { return }
+                _ = self.ensureSession()
             }
         }
     }
 
-    /// 考え中・読み上げ中をやめる
+    // MARK: - 質問
+
+    func ask(_ text: String) {
+        let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        stopSpeaking()
+        guard !prompt.isEmpty else {
+            question = ""
+            answer = "聞き取れませんでした。もう一度話しかけてください。"
+            phase = .idle
+            speak("聞き取れませんでした")
+            return
+        }
+
+        // しばらく話していなければ、新しい会話にする（前の話題を引きずらないように）。
+        // 起動時に用意しただけでまだ使っていない会話は、そのまま使う
+        if sentTurns > 0, Date().timeIntervalSince(lastAsked) > Self.freshConversationAfter {
+            restartSession()
+        }
+        lastAsked = Date()
+
+        question = prompt
+        answer = ""
+        pendingSpeech = ""
+        spokeAnything = false
+        phase = .thinking
+
+        guard let session = ensureSession() else { return }
+        submit(prompt, to: session)
+    }
+
+    private func submit(_ prompt: String, to session: ClaudeSession) {
+        sentTurns += 1
+        activeTurn = sentTurns
+        AudioSpectrum.log("assistant: 質問を送りました（\(prompt.count)文字）")
+        session.send(prompt)
+
+        let turn = activeTurn
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.timeout) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.activeTurn == turn, self.phase == .thinking else { return }
+                // 返事が来ないので、会話を作り直す
+                self.restartSession()
+                self.fail("時間がかかりすぎたので止めました。もう一度話しかけてください。", spoken: "")
+            }
+        }
+    }
+
+    /// 考え中・読み上げ中をやめる（残りの答えは捨てる）
     func stop() {
-        generation += 1
-        if let process, process.isRunning { process.terminate() }
-        process = nil
-        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
+        activeTurn = 0
+        pendingSpeech = ""
+        stopSpeaking()
         if isBusy { phase = .idle }
+    }
+
+    // MARK: - Claude Code の会話
+
+    private func ensureSession() -> ClaudeSession? {
+        if let session, session.isRunning { return session }
+        guard let location = ClaudeLocator.cached else {
+            // まだ場所を調べていなければ、調べてからもう一度
+            ClaudeLocator.resolve { [weak self] found in
+                MainActor.assumeIsolated {
+                    guard let self, self.phase == .thinking else { return }
+                    if found == nil {
+                        self.fail("Claude Code が見つかりません。ターミナルで Claude Code をインストールしてください。",
+                                  spoken: "クロードコードが見つかりませんでした")
+                    } else if let session = self.ensureSession() {
+                        self.submit(self.question, to: session)
+                    }
+                }
+            }
+            return nil
+        }
+        let newSession = ClaudeSession(location: location, persona: Self.persona, model: HUDConfig.assistantModel)
+        newSession.onEvent = { [weak self] event in
+            MainActor.assumeIsolated { self?.handle(event) }
+        }
+        do {
+            try newSession.start()
+        } catch {
+            fail("Claude Code を起動できませんでした。", spoken: "")
+            return nil
+        }
+        // 古い会話の続きが流れてこないよう、数え直す
+        sentTurns = 0
+        finishedTurns = 0
+        session = newSession
+        return newSession
+    }
+
+    private func restartSession() {
+        session?.stop()
+        session = nil
+    }
+
+    private func handle(_ event: ClaudeSession.Event) {
+        // いま流れてきている答えが、最新の（止めていない）質問のものか
+        let current = finishedTurns + 1 == activeTurn
+        switch event {
+        case .text(let chunk):
+            guard current else { return }
+            answer += chunk
+            pendingSpeech += chunk
+            speakCompleteSentences()
+        case .finished(let fullText, let isError):
+            finishedTurns += 1
+            guard current else { return }
+            if answer.isEmpty, !fullText.isEmpty, !isError {
+                // 途中経過が来なかったときは、まとめて受け取った答えを使う
+                answer = fullText
+                pendingSpeech = fullText
+            }
+            if isError, answer.isEmpty {
+                fail("答えを取得できませんでした。\(fullText.suffix(120))", spoken: "答えを取得できませんでした")
+                return
+            }
+            flushSpeech()
+            if !synthesizer.isSpeaking, phase != .speaking { phase = .idle }
+        case .exited(let detail):
+            session = nil
+            guard phase == .thinking, activeTurn != 0 else { return }
+            let lowered = detail.lowercased()
+            let needsLogin: Bool = lowered.contains("login") || lowered.contains("auth")
+            let message: String = needsLogin
+                ? "Claude Code にログインしていません。ターミナルで claude を一度起動して、ログインしてください。"
+                : "Claude Code が止まりました。もう一度話しかけてください。\(detail.suffix(120))"
+            fail(message, spoken: "答えを取得できませんでした")
+        }
+    }
+
+    private func fail(_ message: String, spoken: String) {
+        AudioSpectrum.log("assistant: 失敗 \(message)")
+        activeTurn = 0
+        phase = .failed(message)
+        if !spoken.isEmpty { speak(spoken) }
     }
 
     // MARK: - 読み上げ
 
+    /// 文の終わり（。！？や改行）まで来た部分から、順に読み上げる
+    private func speakCompleteSentences() {
+        let enders: Set<Character> = ["。", "！", "？", "!", "?", "\n"]
+        guard let last = pendingSpeech.lastIndex(where: { enders.contains($0) }) else { return }
+        let ready = String(pendingSpeech[...last])
+        pendingSpeech = String(pendingSpeech[pendingSpeech.index(after: last)...])
+        speak(Self.speakable(ready))
+    }
+
+    private func flushSpeech() {
+        let rest = Self.speakable(pendingSpeech)
+        pendingSpeech = ""
+        if !rest.isEmpty { speak(rest) }
+    }
+
     private func speak(_ text: String) {
-        guard !text.isEmpty else {
-            if case .failed = phase {} else { phase = .idle }
-            return
-        }
+        guard !text.isEmpty else { return }
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = Self.japaneseVoice
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.05
+        utterance.rate = Float(HUDSettings.shared.speechRate)
+        utterance.preUtteranceDelay = 0
+        utterance.postUtteranceDelay = 0
         if case .failed = phase {} else { phase = .speaking }
+        spokeAnything = true
         synthesizer.speak(utterance)
+    }
+
+    private func stopSpeaking() {
+        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
     }
 
     /// いちばん質の良い日本語の声（拡張版・プレミアム版が入っていればそちら）
@@ -120,133 +254,220 @@ final class VoiceAssistant: NSObject, ObservableObject {
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    // MARK: - Claude Code の呼び出し
-
-    private struct RunError: Error {
-        let message: String
-        let spoken: String
-    }
-
-    /// Claude Code を作業用フォルダで呼ぶ。会話の続きは --continue で引き継ぐ。
-    private func run(prompt: String, continues: Bool,
-                     completion: @escaping @Sendable (Result<String, RunError>) -> Void) {
-        let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Muscle/chat", isDirectory: true)
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-
-        var arguments = ["-p", "--append-system-prompt", Self.persona,
-                         // 声のやりとりは速さが大事なので、既定は軽めのモデルにする（HUD_ASSISTANT_MODEL で変更可）
-                         "--model", HUDConfig.assistantModel,
-                         // Claude Code に登録済みの外部連携（MCP）は読み込まない。起動が速くなり、勝手に外部へ触れない
-                         "--strict-mcp-config"]
-        if continues { arguments.append("--continue") }
-        // 天気やニュースに答えられるよう、検索だけは確認なしで使ってよいことにする（最後に置く）
-        arguments += ["--allowedTools", "WebSearch", "WebFetch"]
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        // ターミナルと同じ PATH で claude を探すため、ログインシェルの設定を読んでから実行する。
-        // 引数は "$@" で渡すので、話した内容に記号が入っても壊れない（内容は標準入力で渡す）。
-        process.arguments = ["-lc", "source ~/.zshrc >/dev/null 2>&1; exec claude \"$@\"", "muscle"] + arguments
-        process.currentDirectoryURL = folder
-
-        let input = Pipe()
-        let output = Pipe()
-        let errors = Pipe()
-        process.standardInput = input
-        process.standardOutput = output
-        process.standardError = errors
-
-        // 出力が大きいとパイプが詰まるので、終わるのを待たずに読み続ける
-        let collected = OutputBox()
-        output.fileHandleForReading.readabilityHandler = { handle in collected.appendOut(handle.availableData) }
-        errors.fileHandleForReading.readabilityHandler = { handle in collected.appendErr(handle.availableData) }
-
-        process.terminationHandler = { finished in
-            output.fileHandleForReading.readabilityHandler = nil
-            errors.fileHandleForReading.readabilityHandler = nil
-            collected.appendOut(output.fileHandleForReading.readDataToEndOfFile())
-            collected.appendErr(errors.fileHandleForReading.readDataToEndOfFile())
-            let text = collected.out.trimmingCharacters(in: .whitespacesAndNewlines)
-            let status = finished.terminationStatus
-            DispatchQueue.main.async {
-                if status == 0, !text.isEmpty {
-                    completion(.success(text))
-                } else if status == 127 {
-                    completion(.failure(RunError(
-                        message: "Claude Code が見つかりません。ターミナルで Claude Code をインストールしてください。",
-                        spoken: "クロードコードが見つかりませんでした")))
-                } else if finished.terminationReason == .uncaughtSignal {
-                    completion(.failure(RunError(message: "時間がかかりすぎたので止めました。", spoken: "")))
-                } else {
-                    let detail = collected.err.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let lowered: String = detail.lowercased()
-                    let needsLogin: Bool = lowered.contains("login") || lowered.contains("auth")
-                    let hint: String = needsLogin
-                        ? "ターミナルで claude を一度起動して、ログインしてください。"
-                        : String(detail.suffix(160))
-                    completion(.failure(RunError(message: "答えを取得できませんでした。\(hint)",
-                                                 spoken: "答えを取得できませんでした")))
-                }
-            }
-        }
-
-        do {
-            try process.run()
-        } catch {
-            completion(.failure(RunError(message: "Claude Code を起動できませんでした。", spoken: "")))
-            return
-        }
-        self.process = process
-        input.fileHandleForWriting.write(Data(prompt.utf8))
-        try? input.fileHandleForWriting.close()
-
-        // 返事が来ないときは打ち切る
-        let current = generation
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.timeout) { [weak self] in
-            MainActor.assumeIsolated {
-                guard let self, current == self.generation, process.isRunning else { return }
-                process.terminate()
-            }
-        }
+    fileprivate func speechEnded() {
+        // 答えをまだ受け取っている途中なら「考え中」に戻し、全部読み終えたら待機に戻る
+        guard phase == .speaking, !synthesizer.isSpeaking else { return }
+        let stillAnswering = activeTurn != 0 && finishedTurns < activeTurn
+        phase = stillAnswering ? .thinking : .idle
     }
 }
 
 extension VoiceAssistant: AVSpeechSynthesizerDelegate {
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in
-            if self.phase == .speaking { self.phase = .idle }
-        }
+        Task { @MainActor in self.speechEnded() }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor in
-            if self.phase == .speaking { self.phase = .idle }
-        }
+        Task { @MainActor in self.speechEnded() }
     }
 }
 
-/// 別スレッドから届く出力をためておく
-private final class OutputBox: @unchecked Sendable {
+// MARK: - claude の場所
+
+/// ターミナルと同じ設定で claude の場所と PATH を1度だけ調べて覚えておく
+enum ClaudeLocator {
+    struct Location: Sendable {
+        let executable: String
+        let path: String
+    }
+
+    nonisolated(unsafe) private(set) static var cached: Location?
+    nonisolated(unsafe) private static var resolving = false
+    nonisolated(unsafe) private static var waiters: [(Location?) -> Void] = []
+
+    /// completion はメインスレッドで呼ぶ
+    static func resolve(_ completion: @escaping (Location?) -> Void) {
+        dispatchPrecondition(condition: .onQueue(.main))
+        if let cached {
+            completion(cached)
+            return
+        }
+        waiters.append(completion)
+        guard !resolving else { return }
+        resolving = true
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let found = lookUp()
+            DispatchQueue.main.async {
+                cached = found
+                resolving = false
+                let pending = waiters
+                waiters = []
+                pending.forEach { $0(found) }
+            }
+        }
+    }
+
+    private static func lookUp() -> Location? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", "source ~/.zshrc >/dev/null 2>&1; command -v claude; printf '%s' \"$PATH\""]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice
+        do { try process.run() } catch { return nil }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        let lines = String(decoding: data, as: UTF8.self)
+            .split(separator: "\n").map(String.init)
+        guard lines.count >= 2, lines[0].hasPrefix("/") else {
+            // よくある場所を直接探す
+            let home = NSHomeDirectory()
+            let candidates = ["\(home)/.local/bin/claude", "\(home)/.claude/local/claude",
+                              "/opt/homebrew/bin/claude", "/usr/local/bin/claude"]
+            guard let hit = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+                return nil
+            }
+            let path = "\((hit as NSString).deletingLastPathComponent):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+            return Location(executable: hit, path: path)
+        }
+        return Location(executable: lines[0], path: lines[lines.count - 1])
+    }
+}
+
+// MARK: - 開いたままの Claude Code
+
+/// `claude -p --input-format stream-json` を開いたままにして、質問を1行ずつ送る。
+/// 答えは JSON の行で1文字ずつ流れてくる。
+final class ClaudeSession: @unchecked Sendable {
+    enum Event {
+        case text(String)
+        case finished(String, isError: Bool)
+        case exited(String)
+    }
+
+    /// メインスレッドで呼ぶ
+    var onEvent: ((Event) -> Void)?
+
+    private let process = Process()
+    private let input = Pipe()
+    private let output = Pipe()
+    private let errors = Pipe()
     private let lock = NSLock()
-    private var outData = Data()
-    private var errData = Data()
+    private var buffer = Data()
+    private var errorText = ""
 
-    func appendOut(_ data: Data) {
-        lock.lock(); outData.append(data); lock.unlock()
+    var isRunning: Bool { process.isRunning }
+
+    init(location: ClaudeLocator.Location, persona: String, model: String) {
+        let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Muscle/chat", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        process.executableURL = URL(fileURLWithPath: location.executable)
+        process.arguments = [
+            "-p",
+            "--input-format", "stream-json",
+            "--output-format", "stream-json",
+            "--verbose",
+            "--include-partial-messages",
+            "--model", model,
+            "--append-system-prompt", persona,
+            // 登録済みの外部連携（MCP）は読み込まない。起動が速くなり、勝手に外部へ触れない
+            "--strict-mcp-config",
+            // 使える道具は検索だけにする（ファイル操作やコマンド実行はさせない）
+            "--tools", "WebSearch,WebFetch",
+            "--no-session-persistence",
+            "--allowedTools", "WebSearch", "WebFetch"
+        ]
+        var environment = ProcessInfo.processInfo.environment
+        environment["PATH"] = location.path
+        process.environment = environment
+        process.currentDirectoryURL = folder
+        process.standardInput = input
+        process.standardOutput = output
+        process.standardError = errors
     }
 
-    func appendErr(_ data: Data) {
-        lock.lock(); errData.append(data); lock.unlock()
+    func start() throws {
+        output.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            self?.consume(handle.availableData)
+        }
+        errors.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            guard let self else { return }
+            let text = String(decoding: handle.availableData, as: UTF8.self)
+            self.lock.lock()
+            self.errorText = String((self.errorText + text).suffix(2000))
+            self.lock.unlock()
+        }
+        process.terminationHandler = { [weak self] _ in
+            guard let self else { return }
+            self.output.fileHandleForReading.readabilityHandler = nil
+            self.errors.fileHandleForReading.readabilityHandler = nil
+            self.lock.lock()
+            let detail = self.errorText
+            self.lock.unlock()
+            DispatchQueue.main.async { self.onEvent?(.exited(detail)) }
+        }
+        try process.run()
     }
 
-    var out: String {
-        lock.lock(); defer { lock.unlock() }
-        return String(decoding: outData, as: UTF8.self)
+    func send(_ text: String) {
+        let message: [String: Any] = [
+            "type": "user",
+            "message": ["role": "user", "content": [["type": "text", "text": text]]]
+        ]
+        guard process.isRunning,
+              var line = try? JSONSerialization.data(withJSONObject: message) else { return }
+        line.append(0x0A)
+        input.fileHandleForWriting.write(line)
     }
 
-    var err: String {
-        lock.lock(); defer { lock.unlock() }
-        return String(decoding: errData, as: UTF8.self)
+    func stop() {
+        onEvent = nil
+        try? input.fileHandleForWriting.close()
+        if process.isRunning { process.terminate() }
+    }
+
+    /// 届いたデータを行に分け、1行ずつ JSON として読む
+    private func consume(_ data: Data) {
+        guard !data.isEmpty else { return }
+        lock.lock()
+        buffer.append(data)
+        var lines: [Data] = []
+        while let newline = buffer.firstIndex(of: 0x0A) {
+            lines.append(buffer[buffer.startIndex..<newline])
+            buffer.removeSubrange(buffer.startIndex...newline)
+        }
+        lock.unlock()
+
+        let events = lines.compactMap(Self.parse)
+        guard !events.isEmpty else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            events.forEach { self.onEvent?($0) }
+        }
+    }
+
+    private static func parse(_ line: Data) -> Event? {
+        guard let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+              let type = object["type"] as? String else { return nil }
+        switch type {
+        case "stream_event":
+            // 答えの文字が少しずつ届く（考え中の思考や道具の呼び出しは無視する）
+            guard let event = object["event"] as? [String: Any],
+                  event["type"] as? String == "content_block_delta",
+                  let delta = event["delta"] as? [String: Any],
+                  delta["type"] as? String == "text_delta",
+                  let text = delta["text"] as? String else { return nil }
+            return .text(text)
+        case "result":
+            let text = object["result"] as? String ?? ""
+            let isError = object["is_error"] as? Bool ?? false
+            return .finished(text, isError: isError)
+        default:
+            return nil
+        }
     }
 }

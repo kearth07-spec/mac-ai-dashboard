@@ -45,7 +45,7 @@
 
 | 選択肢 | 声で呼んだときの動き | 必要なもの |
 | --- | --- | --- |
-| **マッスルと会話**（既定） | 話した内容を Claude Code（`claude -p`）に聞き、答えを画面に出して日本語の声で読み上げる。5分以内なら会話の続きとして答える。読み上げ中に2回手を叩くと止まる | Claudeの有料プラン（Pro/Max）でログイン済みの [Claude Code](https://docs.claude.com/en/docs/claude-code)（追加料金なし） |
+| **マッスルと会話**（既定） | 話した内容を Claude Code に聞き、答えを画面に出して日本語の声で読み上げる。Claude Code は開いたままにして、1文できるたびに読み上げ始めるので速い。10分以内なら会話の続きとして答える。読み上げ中に2回手を叩くと止まる。モデルと話す速さは設定で変更可 | Claudeの有料プラン（Pro/Max）でログイン済みの [Claude Code](https://docs.claude.com/en/docs/claude-code)（追加料金なし） |
 | **Claudeアプリ** | Claudeデスクトップアプリを前面に出し、⌘N で新しいチャット → 話した内容を貼り付けて送信 | [Claudeデスクトップアプリ](https://claude.ai/download)、アクセシビリティの許可 |
 | **Claude Code（ターミナル）** | ターミナルの新しいウィンドウで `cd 作業フォルダ && claude "話した内容"` を実行 | [Claude Code](https://docs.claude.com/en/docs/claude-code) のインストール、オートメーション（ターミナル）の許可 |
 | **Codex（音声ライブ）** | 元のORRERYと同じ。Codexアプリで新しいチャット → 音声ライブを開く | Codexアプリ、アクセシビリティの許可 |

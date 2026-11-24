@@ -117,7 +117,9 @@ enum HUDConfig {
     static var wakeDryRun: Bool { UserDefaults.standard.bool(forKey: "wakeDryRun") }
 
     /// 「マッスルと会話」で Claude Code に使わせるモデル（sonnet / opus / haiku など）
-    static var assistantModel: String { value(for: "HUD_ASSISTANT_MODEL") ?? "sonnet" }
+    static var assistantModel: String {
+        value(for: "HUD_ASSISTANT_MODEL") ?? stored("assistantModel") ?? "sonnet"
+    }
 
     static var wakePhraseLocale: String { value(for: "HUD_WAKE_LOCALE") ?? "ja-JP" }
 

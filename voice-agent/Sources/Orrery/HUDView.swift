@@ -14,6 +14,8 @@ final class Services {
     func startBackground() {
         connectWakeWord()
         breaks.start()
+        // 最初の質問を速くするため、Claude Code を先に起動しておく
+        assistant.warmUp()
     }
 
     /// 声と手拍子をAIの起動につなぐ。
