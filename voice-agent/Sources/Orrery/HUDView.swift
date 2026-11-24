@@ -10,6 +10,13 @@ final class Services {
 
     private init() {}
 
+    /// 声と手拍子をAIの起動につなぐ。1回だけ呼ぶ。
+    func connectWakeWord() {
+        let windowState = HUDWindowState.shared
+        wake.onTrigger = { command in windowState.requestVoiceSession(command: command) }
+        wake.isSuppressed = { windowState.sessionActive || windowState.starting }
+    }
+
     let system = SystemMonitor()
     let weather = WeatherService()
     let market = MarketService()
@@ -82,9 +89,6 @@ struct HUDView: View {
             services.weather.start()
             services.market.start()
             services.usage.start()
-            // 音声コマンドとボタンは同じ入口を通す
-            services.wake.onTrigger = { command in windowState.requestVoiceSession(command: command) }
-            services.wake.isSuppressed = { windowState.sessionActive || windowState.starting }
         }
         // 設定画面で地点や銘柄が変わったら取り直す
         .onReceive(settings.dataRefresh) { _ in

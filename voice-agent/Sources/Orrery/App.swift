@@ -79,6 +79,9 @@ enum WindowActions {
 
 @MainActor
 final class HUDWindowState: ObservableObject {
+    /// メニューバーと声の両方から使うので、アプリ全体で1つにする
+    static let shared = HUDWindowState()
+
     @Published var mode: HUDWindowMode = .normal
     /// Codexと音声で話している最中かどうか（Claude系は指示を渡して終わるのでセッションにならない）
     @Published private(set) var sessionActive = false
@@ -185,12 +188,21 @@ final class HUDWindowState: ObservableObject {
 
 @main
 struct OrreryApp: App {
+    static let windowID = "hud"
+
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var audio = AudioSpectrum()
-    @StateObject private var windowState = HUDWindowState()
+    @StateObject private var windowState = HUDWindowState.shared
     @StateObject private var settings = HUDSettings.shared
 
+    init() {
+        // ウィンドウを開く前から（ログイン時の自動起動でも）声と手拍子を聞けるように、ここで用意する
+        Services.shared.connectWakeWord()
+    }
+
     var body: some Scene {
-        WindowGroup {
+        // ウィンドウは1枚だけ。閉じても（⌘W）アプリは裏で聞き取りを続ける
+        Window("ORRERY", id: Self.windowID) {
             HUDView()
                 .environmentObject(audio)
                 .environmentObject(audio.settings)
@@ -218,6 +230,11 @@ struct OrreryApp: App {
 
         Settings {
             SettingsView()
+        }
+
+        // ウィンドウを閉じていても、メニューバーのアイコンから開いたり止めたりできる
+        MenuBarExtra("ORRERY", systemImage: "waveform.circle") {
+            MenuBarContent()
         }
     }
 }

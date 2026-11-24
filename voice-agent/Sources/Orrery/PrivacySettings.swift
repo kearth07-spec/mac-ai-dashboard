@@ -15,7 +15,7 @@ enum PrivacySettings {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
         NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { NSApp.terminate(nil) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { AppDelegate.quit() }
         }
     }
 
