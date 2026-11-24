@@ -134,7 +134,11 @@ final class VoiceAssistant: NSObject, ObservableObject {
             .appendingPathComponent("Muscle/chat", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 
-        var arguments = ["-p", "--append-system-prompt", Self.persona]
+        var arguments = ["-p", "--append-system-prompt", Self.persona,
+                         // 声のやりとりは速さが大事なので、既定は軽めのモデルにする（HUD_ASSISTANT_MODEL で変更可）
+                         "--model", HUDConfig.assistantModel,
+                         // Claude Code に登録済みの外部連携（MCP）は読み込まない。起動が速くなり、勝手に外部へ触れない
+                         "--strict-mcp-config"]
         if continues { arguments.append("--continue") }
         // 天気やニュースに答えられるよう、検索だけは確認なしで使ってよいことにする（最後に置く）
         arguments += ["--allowedTools", "WebSearch", "WebFetch"]

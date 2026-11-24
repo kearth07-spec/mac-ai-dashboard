@@ -116,6 +116,9 @@ enum HUDConfig {
     /// 一致しても起動せずログだけ出す（合図の調整用）
     static var wakeDryRun: Bool { UserDefaults.standard.bool(forKey: "wakeDryRun") }
 
+    /// 「マッスルと会話」で Claude Code に使わせるモデル（sonnet / opus / haiku など）
+    static var assistantModel: String { value(for: "HUD_ASSISTANT_MODEL") ?? "sonnet" }
+
     static var wakePhraseLocale: String { value(for: "HUD_WAKE_LOCALE") ?? "ja-JP" }
 
     /// 粒子の数。負荷が高いときに減らせる（0で粒子を描かない）
