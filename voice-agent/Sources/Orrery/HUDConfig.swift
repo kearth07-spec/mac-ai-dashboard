@@ -73,7 +73,7 @@ enum HUDConfig {
     static var wakePhrases: [String] {
         let raw = value(for: "HUD_WAKE_PHRASES")
             ?? stored("wakePhrases")
-            ?? "オレリ,オーレリ,クロード,コーデック,コデック,orrery,claude,codex"
+            ?? "マッスル,マッスー,muscle"
         return raw.split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }

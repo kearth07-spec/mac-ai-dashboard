@@ -70,7 +70,7 @@ final class WakeWordListener: ObservableObject {
     private func start() {
         // 素の実行ファイルだと用途説明を読めず、許可を求めた瞬間にOSがプロセスを落とす
         guard Bundle.main.bundleURL.pathExtension == "app" else {
-            message = "音声起動は Orrery.app から起動したときだけ使えます（ORRERYを起動.command を実行してください）"
+            message = "音声起動は Muscle.app から起動したときだけ使えます（マッスルを起動.command を実行してください）"
             enabled = false
             return
         }

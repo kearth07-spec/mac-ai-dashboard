@@ -1,4 +1,4 @@
-# ORRERY 音声起動AIエージェント版
+# マッスル（MUSCLE）音声起動AIエージェント
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
@@ -11,22 +11,22 @@
 1. Mac のターミナルで次を実行してビルド＆起動（Xcode か Command Line Tools が必要）
    ```bash
    git clone https://github.com/kearth07-spec/mac-ai-dashboard.git
-   cd mac-ai-dashboard/voice-agent && ./ORRERYを起動.command
+   cd mac-ai-dashboard/voice-agent && ./マッスルを起動.command
    ```
 2. 設定画面（⌘,）›「一般」›「起動するAI」で、起動したいAIを選ぶ
 3. 上部右の「音声OFF」を押して「音声起動」にし、話しかける
-   - 「**オレリー、今日のニュースを要約して**」→ Claudeアプリに新しいチャットができて、その内容が送信される
-   - 「**クロード**」だけ言って黙る → 約5秒指示を待ち、何も言わなければアプリを開くだけ
+   - 「**マッスル、今日のニュースを要約して**」→ Claudeアプリに新しいチャットができて、その内容が送信される
+   - 「**マッスル**」だけ言って黙る → 約5秒指示を待ち、何も言わなければアプリを開くだけ
    - 「**パンパン**」と2回手を叩く → 「指示をどうぞ」と出るので、続けて話す（設定 ›「手を叩いて起動」でON/OFF・感度を変更）
    - 呼び名は設定 ›「声で起動」の「合図」で好きな名前に変えられます（例: `ジャービス,ジャーヴィス`）
 
 ### 画面を閉じても、裏でずっと聞き取る
 
 - **⌘Q や ⌘W を押してもアプリは終了せず**、画面だけ閉じて裏で声・手拍子を聞き続けます
-- 画面上部のメニューバーに **〜 アイコン（ORRERY）** が出ます。ここから
+- 画面上部のメニューバーに **筋トレのアイコン（MUSCLE）** が出ます。ここから
   - ダッシュボードを開く／声・手拍子での起動のON/OFF
   - **Macにログインしたら自動で起動**（ONにすると、電源を入れるだけで待ち受け開始）
-  - **ORRERY を完全に終了**（本当に止めたいときはここから）
+  - **マッスル を完全に終了**（本当に止めたいときはここから）
 
 ### 起動するAIの切り替え
 
@@ -164,7 +164,7 @@ ScreenCaptureKitのフィルタを使い、Codex（`com.openai.codex`／表示�
 
 上部右の「音声OFF」を押すと待ち受けが始まり、決めた言葉を聞き取るとボタンを押したのと同じ動作をします。
 
-- 既定の合図: `オレリー` / `クロード` / `コーデックス` / `orrery` / `claude` / `codex`
+- 既定の合図: `マッスル` / `muscle`
 - Claude系を選んでいるときは、合図に続けて話した内容がそのまま指示になります
 - 認識は**端末内だけ**（`requiresOnDeviceRecognition`）で行い、音声は保存も送信もしません
 - セッション中は反応しません（Codexの声で誤って起動しないため）。一度反応すると6秒は次を受け付けません
@@ -221,7 +221,7 @@ Mission Control、App Exposé、ウィンドウの整列（タイル表示）に
 | `HUD_AGENT` | `claude` | 起動するAI（`claude` / `claude-code` / `codex`） |
 | `HUD_CLAUDE_CODE_DIR` | `~` | Claude Code を起動するフォルダ |
 | `HUD_AUDIO_APPS` | 起動するAIに合わせる（`claude` か `codex`） | 音を拾う対象アプリ（アプリ名かバンドルIDの一部、カンマ区切り） |
-| `HUD_WAKE_PHRASES` | `オレリ,オーレリ,クロード,コーデック,コデック,orrery,claude,codex` | 声で起動するときの合図（カンマ区切り） |
+| `HUD_WAKE_PHRASES` | `マッスル,マッスー,muscle` | 声で起動するときの合図（カンマ区切り） |
 | `HUD_WAKE_LOCALE` | `ja-JP` | 音声認識の言語 |
 | `HUD_GRAINS` | `1100` | 粒子の数（0で粒子なし） |
 | `HUD_FPS` / `HUD_IDLE_FPS` | `30` / `12` | 音が出ている間 / 待機中の更新頻度 |

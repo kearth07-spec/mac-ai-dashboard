@@ -7,9 +7,11 @@
     <key>CFBundleIconFile</key>
     <string>Orrery</string>
     <key>CFBundleName</key>
-    <string>Orrery</string>
+    <string>Muscle</string>
+    <key>CFBundleDisplayName</key>
+    <string>Muscle</string>
     <key>CFBundleExecutable</key>
-    <string>Orrery</string>
+    <string>Muscle</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

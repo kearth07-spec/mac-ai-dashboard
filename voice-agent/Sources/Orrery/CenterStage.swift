@@ -42,7 +42,7 @@ private struct CodexReadout: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("ORRERY")
+            Text("MUSCLE")
                 .font(.system(size: 64, weight: .black, design: .default))
                 .tracking(Self.tracking)
                 // trackingは最後の文字の後ろにも隙間を作るので、その半分だけ右に寄せて中心を合わせる

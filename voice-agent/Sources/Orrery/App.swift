@@ -143,7 +143,7 @@ final class HUDWindowState: ObservableObject {
             }
         case .needsAutomation:
             show("ターミナルを操作する許可がありません。"
-                 + "システム設定 › プライバシーとセキュリティ › オートメーション で Orrery の「ターミナル」をONにしてください。",
+                 + "システム設定 › プライバシーとセキュリティ › オートメーション で Muscle の「ターミナル」をONにしてください。",
                  pane: .automation)
         case .failed(let message):
             show(message)
@@ -202,7 +202,7 @@ struct OrreryApp: App {
 
     var body: some Scene {
         // ウィンドウは1枚だけ。閉じても（⌘W）アプリは裏で聞き取りを続ける
-        Window("ORRERY", id: Self.windowID) {
+        Window("MUSCLE", id: Self.windowID) {
             HUDView()
                 .environmentObject(audio)
                 .environmentObject(audio.settings)
@@ -233,7 +233,7 @@ struct OrreryApp: App {
         }
 
         // ウィンドウを閉じていても、メニューバーのアイコンから開いたり止めたりできる
-        MenuBarExtra("ORRERY", systemImage: "waveform.circle") {
+        MenuBarExtra("MUSCLE", systemImage: "figure.strengthtraining.traditional") {
             MenuBarContent()
         }
     }
@@ -267,7 +267,7 @@ private struct WindowConfigurator: NSViewRepresentable {
 
     /// 一度だけの設定。ここでフレームを決め、以後はユーザーの移動やリサイズを尊重する。
     private static func configureOnce(_ window: NSWindow) {
-        window.title = "ORRERY"
+        window.title = "MUSCLE"
         // 背景は不透明に塗っているので、透明ウィンドウにしない。
         // 透明だと再描画のたびに背後との合成が走って重くなる。
         window.isOpaque = true

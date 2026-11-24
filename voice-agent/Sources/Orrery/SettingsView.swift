@@ -82,9 +82,9 @@ private struct GeneralTab: View {
 
             Section("声で起動") {
                 TextField("合図（カンマ区切り）", text: $settings.wakePhrasesText,
-                          prompt: Text("オレリ,クロード,コーデック,orrery,claude,codex"))
+                          prompt: Text("マッスル,マッスー,muscle"))
                 Text("語幹で書くと認識のゆらぎを拾いやすくなります。次の聞き取りから反映されます。\n"
-                     + "Claude系では、合図に続けて話した内容がそのまま指示になります（例:「オレリー、今日のニュースを要約して」）。")
+                     + "Claude系では、合図に続けて話した内容がそのまま指示になります（例:「マッスル、今日のニュースを要約して」）。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 EnvOverrideNote(keys: ["HUD_WAKE_PHRASES"])

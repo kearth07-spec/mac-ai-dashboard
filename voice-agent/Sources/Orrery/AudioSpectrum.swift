@@ -219,10 +219,10 @@ final class AudioSpectrum: ObservableObject {
 
     private static var didRequestScreenAccess = false
 
-    /// 診断ログを ~/Library/Logs/Orrery.log に残す（どのスレッドからでも呼べる）
+    /// 診断ログを ~/Library/Logs/Muscle.log に残す（どのスレッドからでも呼べる）
     nonisolated static func log(_ text: String) {
         let url = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Library/Logs/Orrery.log")
+            .appendingPathComponent("Library/Logs/Muscle.log")
         let line = "[\(Date().formatted(date: .omitted, time: .standard))] \(text)\n"
         if let handle = try? FileHandle(forWritingTo: url) {
             handle.seekToEndOfFile()

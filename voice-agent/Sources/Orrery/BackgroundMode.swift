@@ -74,6 +74,6 @@ struct MenuBarContent: View {
             get: { LoginItem.isEnabled },
             set: { LoginItem.set($0) }))
         Divider()
-        Button("ORRERY を完全に終了") { AppDelegate.quit() }
+        Button("マッスル を完全に終了") { AppDelegate.quit() }
     }
 }
