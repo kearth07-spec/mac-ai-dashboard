@@ -22,12 +22,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .attributeDescriptor(forKeyword: AEKeyword(kAEQuitReason)) != nil {
             return .terminateNow
         }
-        // ふつうの ⌘Q はウィンドウを閉じるだけ（メニューバーのアイコンは titled ではないので残る）
-        for window in sender.windows where window.isVisible && window.styleMask.contains(.titled) {
-            window.close()
-        }
-        AudioSpectrum.log("⌘Q: ウィンドウを閉じて裏で聞き取りを続けます")
+        // ふつうの ⌘Q はアプリを「隠す」だけ。閉じてしまうと Dock や Spotlight から開き直しても
+        // 画面が戻らないので、隠しておいて、開き直されたら同じ画面をそのまま出す。
+        sender.hide(nil)
+        AudioSpectrum.log("⌘Q: 画面を隠して裏で聞き取りを続けます")
         return .terminateCancel
+    }
+
+    /// Dock のアイコンや Spotlight から開き直されたとき
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if sender.isHidden { sender.unhide(nil) }
+        // ⌘W などで閉じられていたら、隠れているダッシュボードのウィンドウを前に出す
+        if !flag, let window = sender.windows.first(where: { $0.title == "MUSCLE" }) {
+            window.makeKeyAndOrderFront(nil)
+            return false
+        }
+        // それでも無ければ SwiftUI に新しく開いてもらう
+        return true
     }
 }
 

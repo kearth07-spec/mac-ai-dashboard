@@ -283,6 +283,8 @@ private struct WindowConfigurator: NSViewRepresentable {
     /// 一度だけの設定。ここでフレームを決め、以後はユーザーの移動やリサイズを尊重する。
     private static func configureOnce(_ window: NSWindow) {
         window.title = "MUSCLE"
+        // ⌘W で閉じても破棄せず、Dock から開き直したときに同じウィンドウを出せるようにする
+        window.isReleasedWhenClosed = false
         // 背景は不透明に塗っているので、透明ウィンドウにしない。
         // 透明だと再描画のたびに背後との合成が走って重くなる。
         window.isOpaque = true
