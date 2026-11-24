@@ -70,7 +70,8 @@ final class CalendarService: ObservableObject {
             .compactMap { event in
                 guard let start = event.startDate, let finish = event.endDate else { return nil }
                 // 繰り返しの予定は同じIDになるので、開始時刻もつけて区別する
-                let identifier = (event.eventIdentifier ?? UUID().uuidString) + "-\(start.timeIntervalSince1970)"
+                let base: String = event.eventIdentifier ?? UUID().uuidString
+                let identifier = "\(base)-\(start.timeIntervalSince1970)"
                 return AgendaItem(id: identifier,
                                   title: event.title ?? "（無題）",
                                   start: start,

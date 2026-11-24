@@ -88,7 +88,7 @@ final class BreakReminder: ObservableObject {
 
         workedSeconds = now.timeIntervalSince(sessionStart)
         let settings = HUDSettings.shared
-        let limit = max(1, settings.breakMinutes) * 60
+        let limit: Double = max(1.0, settings.breakMinutes) * 60.0
         isDue = workedSeconds >= limit
         if isDue, !notified, settings.breakNotify {
             notified = true

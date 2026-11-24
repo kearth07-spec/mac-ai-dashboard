@@ -63,6 +63,11 @@ struct LessonPanel: View {
     /// ◀ ▶ で前後のレッスンを見る（0が今日）
     @State private var offset = 0
 
+    private var dayLabel: String {
+        if offset == 0 { return "今日のレッスン" }
+        return offset < 0 ? "\(-offset)日前" : "\(offset)日後"
+    }
+
     var body: some View {
         let lesson = Lessons.today(offset: offset)
         HUDPanel(title: "MAC & AI LESSON", trailing: "DAY \(lesson.day) / \(Lessons.all.count)") {
@@ -73,7 +78,7 @@ struct LessonPanel: View {
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
                     .background(Capsule().fill(HUD.cyan.opacity(0.12)))
-                Text(offset == 0 ? "今日のレッスン" : (offset < 0 ? "\(-offset)日前" : "\(offset)日後"))
+                Text(dayLabel)
                     .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.45))
                 Spacer()
@@ -131,13 +136,15 @@ struct BreakPanel: View {
     @ObservedObject private var settings = HUDSettings.shared
 
     var body: some View {
-        let limit = max(1, settings.breakMinutes) * 60
-        let ratio = min(1, reminder.workedSeconds / limit)
-        let tint = reminder.isDue ? HUD.warn : HUD.up
+        let limit: Double = max(1.0, settings.breakMinutes) * 60.0
+        let ratio: Double = min(1.0, reminder.workedSeconds / limit)
+        let tint: Color = reminder.isDue ? HUD.warn : HUD.up
+        let glow: CGFloat = reminder.isDue ? 1 : 0
+        let minutes: Int = Int(reminder.workedSeconds / 60)
         HUDPanel(title: "MUSCLE BREAK", trailing: "\(Int(settings.breakMinutes))分ごと",
-                 glow: reminder.isDue ? 1 : 0) {
+                 glow: glow) {
             HStack(alignment: .lastTextBaseline, spacing: 6) {
-                Text("\(Int(reminder.workedSeconds / 60))")
+                Text(String(minutes))
                     .font(HUD.mono(28, .bold))
                     .foregroundStyle(.white)
                 Text("分 連続で作業中")
@@ -154,7 +161,7 @@ struct BreakPanel: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.white.opacity(0.08))
-                    Capsule().fill(tint).frame(width: proxy.size.width * ratio)
+                    Capsule().fill(tint).frame(width: proxy.size.width * CGFloat(ratio))
                 }
             }
             .frame(height: 5)

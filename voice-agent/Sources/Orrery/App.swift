@@ -144,25 +144,21 @@ final class HUDWindowState: ObservableObject {
         case .needsAccessibility:
             switch target {
             case .codex:
-                show("音声モードは Codex 側で ⌃⇧V を押すと開きます。"
-                     + "自動で開くには システム設定 › プライバシーとセキュリティ › アクセシビリティ でこのアプリを許可してください。",
+                show("音声モードは Codex 側で ⌃⇧V を押すと開きます。自動で開くには システム設定 › プライバシーとセキュリティ › アクセシビリティ でこのアプリを許可してください。",
                      pane: .accessibility)
                 beginSession(target: target)
             default:
-                show("Claudeアプリを開きました。"
-                     + (command.isEmpty ? "" : "話した内容はクリップボードにあるので ⌘V で貼り付けられます。")
-                     + "自動で入力するには アクセシビリティ でこのアプリを許可してください。",
+                let clipboardNote: String = command.isEmpty ? "" : "話した内容はクリップボードにあるので ⌘V で貼り付けられます。"
+                show("Claudeアプリを開きました。\(clipboardNote)自動で入力するには アクセシビリティ でこのアプリを許可してください。",
                      pane: .accessibility)
             }
         case .notInstalled:
             switch target {
             case .codex: show("Codexアプリ（\(AgentLauncher.codexBundleIdentifier)）が見つかりませんでした。")
-            default: show("Claudeアプリ（\(AgentLauncher.claudeBundleIdentifier)）が見つかりませんでした。"
-                          + "claude.ai/download からインストールしてください。")
+            default: show("Claudeアプリ（\(AgentLauncher.claudeBundleIdentifier)）が見つかりませんでした。claude.ai/download からインストールしてください。")
             }
         case .needsAutomation:
-            show("ターミナルを操作する許可がありません。"
-                 + "システム設定 › プライバシーとセキュリティ › オートメーション で Muscle の「ターミナル」をONにしてください。",
+            show("ターミナルを操作する許可がありません。システム設定 › プライバシーとセキュリティ › オートメーション で Muscle の「ターミナル」をONにしてください。",
                  pane: .automation)
         case .failed(let message):
             show(message)

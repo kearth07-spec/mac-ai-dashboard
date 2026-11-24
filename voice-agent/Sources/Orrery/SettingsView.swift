@@ -83,8 +83,7 @@ private struct GeneralTab: View {
             Section("声で起動") {
                 TextField("合図（カンマ区切り）", text: $settings.wakePhrasesText,
                           prompt: Text("マッスル,マッスー,muscle"))
-                Text("語幹で書くと認識のゆらぎを拾いやすくなります。次の聞き取りから反映されます。\n"
-                     + "Claude系では、合図に続けて話した内容がそのまま指示になります（例:「マッスル、今日のニュースを要約して」）。")
+                Text("語幹で書くと認識のゆらぎを拾いやすくなります。次の聞き取りから反映されます。\n合図に続けて話した内容がそのまま指示になります（例:「マッスル、今日のニュースを要約して」）。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 EnvOverrideNote(keys: ["HUD_WAKE_PHRASES"])
@@ -99,8 +98,7 @@ private struct GeneralTab: View {
                         }
                     }
                 }
-                Text("上部右の「音声起動」がONのときに使えます。叩いたあとに話した内容が指示になります（Claude系）。"
-                     + "物音で誤作動するときは感度を下げ、反応しないときは上げてください。")
+                Text("上部右の「音声起動」がONのときに使えます。叩いたあとに話した内容が指示になります。物音で誤作動するときは感度を下げ、反応しないときは上げてください。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

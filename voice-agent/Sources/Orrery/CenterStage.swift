@@ -129,7 +129,7 @@ private struct CodexButton: View {
                         .frame(maxWidth: 460)
                     if let pane = windowState.noticePane {
                         HStack(spacing: 8) {
-                            noticeButton(pane == .automation ? "オートメーション設定を開く" : "アクセシビリティ設定を開く") {
+                            noticeButton(pane == .automation ? String("オートメーション設定を開く") : String("アクセシビリティ設定を開く")) {
                                 PrivacySettings.open(pane)
                             }
                             noticeButton("許可したら再起動") { PrivacySettings.relaunch() }

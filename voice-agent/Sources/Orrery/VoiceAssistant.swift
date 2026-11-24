@@ -180,7 +180,9 @@ final class VoiceAssistant: NSObject, ObservableObject {
                     completion(.failure(RunError(message: "時間がかかりすぎたので止めました。", spoken: "")))
                 } else {
                     let detail = collected.err.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let hint = detail.lowercased().contains("login") || detail.lowercased().contains("auth")
+                    let lowered: String = detail.lowercased()
+                    let needsLogin: Bool = lowered.contains("login") || lowered.contains("auth")
+                    let hint: String = needsLogin
                         ? "ターミナルで claude を一度起動して、ログインしてください。"
                         : String(detail.suffix(160))
                     completion(.failure(RunError(message: "答えを取得できませんでした。\(hint)",

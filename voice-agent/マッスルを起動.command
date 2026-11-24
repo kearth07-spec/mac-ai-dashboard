@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 
 APP="$HOME/Applications/Muscle.app"
 
-echo "ビルド中…"
+echo "ビルド中…（大きな更新のあとは数分かかります）"
 swift build -c release
 
 # 動いている古い版を止める（旧名 Orrery.app も）

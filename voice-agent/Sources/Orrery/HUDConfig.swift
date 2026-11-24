@@ -98,19 +98,19 @@ enum HUDConfig {
 
     /// 「よく使う指示」のボタン。設定画面で書き換えられる。
     static var quickCommands: [QuickCommand] {
-        let raw = stored("quickCommands") ?? defaultQuickCommandsText
-        return raw.split(separator: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-            .enumerated()
-            .map { index, line in
-                let parts = line.split(separator: "|", maxSplits: 1).map {
-                    $0.trimmingCharacters(in: .whitespaces)
-                }
-                let prompt = parts.count > 1 ? parts[1] : parts[0]
-                let label = parts.count > 1 ? parts[0] : String(prompt.prefix(14))
-                return QuickCommand(id: index, label: label, prompt: prompt)
+        let raw: String = stored("quickCommands") ?? defaultQuickCommandsText
+        var commands: [QuickCommand] = []
+        for piece in raw.split(separator: "\n") {
+            let line: String = piece.trimmingCharacters(in: .whitespaces)
+            guard !line.isEmpty else { continue }
+            let parts: [String] = line.split(separator: "|", maxSplits: 1).map {
+                $0.trimmingCharacters(in: .whitespaces)
             }
+            let prompt: String = parts.count > 1 ? parts[1] : parts[0]
+            let label: String = parts.count > 1 ? parts[0] : String(prompt.prefix(14))
+            commands.append(QuickCommand(id: commands.count, label: label, prompt: prompt))
+        }
+        return commands
     }
 
     /// 一致しても起動せずログだけ出す（合図の調整用）
