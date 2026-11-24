@@ -22,6 +22,11 @@ final class Services {
         wake.onTrigger = { command in windowState.requestVoiceSession(command: command) }
         let assistant = self.assistant
         wake.isSuppressed = { windowState.sessionActive || windowState.starting || assistant.isBusy }
+        // 呼びかけた瞬間にダッシュボードを前に出す（マッスルと会話のときだけ。
+        // ほかのAIを起動するときは、そのアプリが前に出るのでじゃましない）
+        wake.onWake = {
+            if HUDConfig.agentTarget == .voiceChat { WindowActions.showDashboard() }
+        }
         // 読み上げ中に手拍子したら止める
         wake.onClapWhileBusy = { assistant.stop() }
     }

@@ -23,6 +23,8 @@ final class WakeWordListener: ObservableObject {
 
     /// 呼び出し側でAIの起動につなぐ。引数は合図のあとに話した内容（無ければ空文字）
     var onTrigger: ((String) -> Void)?
+    /// 合図・手拍子に反応した瞬間に呼ぶ（ダッシュボードを前に出すのに使う）
+    var onWake: (() -> Void)?
     /// isSuppressed の間に手拍子されたとき（読み上げを止めるのに使う）
     var onClapWhileBusy: (() -> Void)?
     /// セッション中は反応させない（Codexの声で自分が誤爆しないように）
@@ -213,6 +215,7 @@ final class WakeWordListener: ObservableObject {
         guard Self.textAfterWakePhrase(in: transcript) != nil else { return }
 
         AudioSpectrum.log("wake: 合図に一致しました")
+        if !HUDConfig.wakeDryRun { onWake?() }
         lastTrigger = Date()
 
         // Codexは向こうの音声ライブで話すので、合図だけで起動する
@@ -242,6 +245,7 @@ final class WakeWordListener: ObservableObject {
         }
         guard Date().timeIntervalSince(lastTrigger) > Self.cooldown else { return }
         AudioSpectrum.log("wake: 手拍子を検出しました")
+        if !HUDConfig.wakeDryRun { onWake?() }
         lastTrigger = Date()
 
         guard HUDConfig.agentTarget.acceptsSpokenCommand else {

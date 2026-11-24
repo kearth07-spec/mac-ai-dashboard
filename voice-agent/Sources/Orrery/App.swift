@@ -65,6 +65,17 @@ enum WindowActions {
         window.setFrame(screen.visibleFrame, display: true, animate: true)
     }
 
+    /// 隠れている・閉じているダッシュボードを前面に出す（呼びかけられたときに使う）
+    static func showDashboard() {
+        let app = NSApplication.shared
+        if app.isHidden { app.unhide(nil) }
+        if let window = app.windows.first(where: { $0.title == "MUSCLE" }) {
+            if window.isMiniaturized { window.deminiaturize(nil) }
+            window.makeKeyAndOrderFront(nil)
+        }
+        app.activate(ignoringOtherApps: true)
+    }
+
     /// 画面中央に、少し小さめで置く
     static func centerSmall() {
         guard let window = target, let screen = window.screen ?? NSScreen.main else { return }
@@ -127,6 +138,7 @@ final class HUDWindowState: ObservableObject {
             return
         }
         show(nil)
+        WindowActions.showDashboard()
         services.assistant.ask(command)
     }
 
