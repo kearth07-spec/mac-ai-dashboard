@@ -1,6 +1,6 @@
 import AppKit
 import CoreGraphics
-import UserNotifications
+@preconcurrency import UserNotifications
 
 /// 座りっぱなしを防ぐ休憩リマインダー。
 /// キーボードやトラックパッドを5分以上触らなければ「休憩した」とみなし、
