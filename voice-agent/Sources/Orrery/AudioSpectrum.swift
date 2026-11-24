@@ -255,10 +255,22 @@ final class AudioSpectrum: ObservableObject {
 
     /// 画面収録の許可があとから通ることもあるので、失敗したら数秒おきに繰り返す
     private func attach() async {
-        // 許可ダイアログは1回の起動につき1度だけ。繰り返すと出続けてしまう。
-        if !CGPreflightScreenCaptureAccess(), !Self.didRequestScreenAccess {
-            Self.didRequestScreenAccess = true
-            _ = CGRequestScreenCaptureAccess()
+        // 許可が無いまま SCShareableContent を呼ぶと、そのたびにOSの確認ダイアログが出てしまう。
+        // 許可が無い間は何も試さず、ダイアログを出さない CGPreflight で静かに見張るだけにする。
+        // （許可は「設定を開く」ボタンから。許可したあとはアプリの再起動が必要）
+        guard CGPreflightScreenCaptureAccess() else {
+            if !Self.didRequestScreenAccess {
+                Self.didRequestScreenAccess = true
+                Self.log("画面収録が未許可のため、音声の取り込みを待機します（声での起動には影響しません）")
+            }
+            // 同じ値でも代入すると画面全体が描き直されるので、変わるときだけ入れる
+            if sourceLabel != "NO ACCESS" {
+                message = "画面収録を許可すると音声に反応します"
+                sourceLabel = "NO ACCESS"
+            }
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            await attach()
+            return
         }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
