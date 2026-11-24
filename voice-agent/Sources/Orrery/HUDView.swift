@@ -4,6 +4,12 @@ import SwiftUI
 /// 監視は各パネル側（@ObservedObject）に閉じ込める。
 @MainActor
 final class Services {
+    /// アプリ全体で1つだけ。View の作り直しのたびに作ると、音声認識やマイクが何重にも起動して
+    /// 聞き取りが毎回リセットされてしまう（@State の初期値は View を作るたびに評価される）。
+    static let shared = Services()
+
+    private init() {}
+
     let system = SystemMonitor()
     let weather = WeatherService()
     let market = MarketService()
@@ -14,7 +20,7 @@ final class Services {
 struct HUDView: View {
     @EnvironmentObject private var windowState: HUDWindowState
     @ObservedObject private var settings = HUDSettings.shared
-    @State private var services = Services()
+    private let services = Services.shared
 
     var body: some View {
         GeometryReader { proxy in
