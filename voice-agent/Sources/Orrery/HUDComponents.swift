@@ -292,3 +292,21 @@ enum Format {
         return days > 0 ? "\(days)d \(hours)h \(minutes)m" : "\(hours)h \(minutes)m"
     }
 }
+
+
+// MARK: - @State の代わり
+
+/// 新しい macOS SDK では @State が「マクロ」になり、Command Line Tools だけの環境では
+/// マクロのプラグインが無くてビルドできないことがある。マクロを使わない @StateObject で代用する。
+final class ViewFlag: ObservableObject {
+    @Published var value = false
+}
+
+final class ViewCounter: ObservableObject {
+    @Published var value = 0
+}
+
+/// アニメーションの起点。アプリ起動時の時刻を共有する（@State の Date() の代わり）
+enum AppClock {
+    static let launched = Date()
+}

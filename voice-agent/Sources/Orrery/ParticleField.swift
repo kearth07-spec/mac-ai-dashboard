@@ -39,7 +39,7 @@ struct SandStream: View {
     @EnvironmentObject private var audio: AudioSpectrum
 
     private var grainCount: Int { Int(Double(HUDConfig.grainCount) * 0.7) }
-    @State private var started = Date()
+    private let started = AppClock.launched
     private let bucketCount = 12
 
     var body: some View {

@@ -7,7 +7,8 @@ private struct PanelButton: View {
     var icon: String?
     var tint: Color = HUD.cyan
     let action: () -> Void
-    @State private var hovering = false
+    @StateObject private var hover = ViewFlag()
+    private var hovering: Bool { hover.value }
 
     var body: some View {
         Button(action: action) {
@@ -22,7 +23,7 @@ private struct PanelButton: View {
             .overlay(Capsule().stroke(tint.opacity(0.4), lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .onHover { hover.value = $0 }
     }
 }
 
@@ -61,7 +62,8 @@ extension Lessons {
 
 struct LessonPanel: View {
     /// ◀ ▶ で前後のレッスンを見る（0が今日）
-    @State private var offset = 0
+    @StateObject private var day = ViewCounter()
+    private var offset: Int { day.value }
 
     private var dayLabel: String {
         if offset == 0 { return "今日のレッスン" }
@@ -82,9 +84,9 @@ struct LessonPanel: View {
                     .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.45))
                 Spacer()
-                PanelButton(title: "◀") { offset -= 1 }
-                if offset != 0 { PanelButton(title: "今日") { offset = 0 } }
-                PanelButton(title: "▶") { offset += 1 }
+                PanelButton(title: "◀") { day.value -= 1 }
+                if offset != 0 { PanelButton(title: "今日") { day.value = 0 } }
+                PanelButton(title: "▶") { day.value += 1 }
             }
 
             Text(lesson.title)
@@ -296,7 +298,8 @@ private struct CommandTile: View {
     let command: QuickCommand
     let disabled: Bool
     let action: () -> Void
-    @State private var hovering = false
+    @StateObject private var hover = ViewFlag()
+    private var hovering: Bool { hover.value }
 
     var body: some View {
         Button(action: action) {
@@ -312,7 +315,7 @@ private struct CommandTile: View {
         }
         .buttonStyle(.plain)
         .disabled(disabled)
-        .onHover { hovering = $0 }
+        .onHover { hover.value = $0 }
         .help(command.prompt)
     }
 }

@@ -4,7 +4,7 @@ struct CenterStage: View {
     @EnvironmentObject private var audio: AudioSpectrum
     let cpu: Double
     let memory: Double
-    @State private var started = Date()
+    private let started = AppClock.launched
 
     var body: some View {
         ZStack {
@@ -87,7 +87,8 @@ private struct CodexButton: View {
     @EnvironmentObject private var windowState: HUDWindowState
     /// 起動するAIが変わったらボタンの文言を変える
     @ObservedObject private var settings = HUDSettings.shared
-    @State private var hovering = false
+    @StateObject private var hover = ViewFlag()
+    private var hovering: Bool { hover.value }
 
     var body: some View {
         VStack(spacing: 9) {
@@ -117,7 +118,7 @@ private struct CodexButton: View {
             }
             .buttonStyle(.plain)
             .disabled(windowState.starting)
-            .onHover { hovering = $0 }
+            .onHover { hover.value = $0 }
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovering)
 
             if let notice = windowState.notice {
