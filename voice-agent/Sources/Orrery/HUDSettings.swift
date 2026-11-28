@@ -115,7 +115,12 @@ final class HUDSettings: ObservableObject {
         breakMinutes = store.object(forKey: "breakMinutes") as? Double ?? 50
         breakNotify = store.object(forKey: "breakNotify") as? Bool ?? true
         speechRate = store.object(forKey: "speechRate") as? Double ?? 0.58
-        assistantModel = store.string(forKey: "assistantModel") ?? "sonnet"
+        assistantModel = store.string(forKey: "assistantModel") ?? "haiku"
+        // 「最速に」の指定に合わせて、以前の既定（sonnet）から一度だけ haiku に切り替える
+        if !store.bool(forKey: "assistantModelFastest") {
+            store.set(true, forKey: "assistantModelFastest")
+            assistantModel = "haiku"
+        }
         grainCount = Double(store.object(forKey: "grainCount") as? Int ?? 1100)
         activeFPS = store.object(forKey: "activeFPS") as? Double ?? 30
         idleFPS = store.object(forKey: "idleFPS") as? Double ?? 12
@@ -152,7 +157,7 @@ final class HUDSettings: ObservableObject {
         breakMinutes = 50
         breakNotify = true
         speechRate = 0.58
-        assistantModel = "sonnet"
+        assistantModel = "haiku"
         grainCount = 1100
         activeFPS = 30
         idleFPS = 12

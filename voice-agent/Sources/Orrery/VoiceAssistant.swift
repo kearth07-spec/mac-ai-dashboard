@@ -373,6 +373,8 @@ final class ClaudeSession: @unchecked Sendable {
             "--verbose",
             "--include-partial-messages",
             "--model", model,
+            // 声のやりとりでは長く考えさせず、すぐ答え始めさせる
+            "--effort", "low",
             "--append-system-prompt", persona,
             // 登録済みの外部連携（MCP）は読み込まない。起動が速くなり、勝手に外部へ触れない
             "--strict-mcp-config",
