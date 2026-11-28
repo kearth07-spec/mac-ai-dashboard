@@ -57,7 +57,7 @@ final class VoiceAssistant: NSObject, ObservableObject {
 
     /// アプリ起動時に呼ぶ。claude の場所を調べ、会話の準備をしておく（最初の質問が速くなる）
     func warmUp() {
-        ClaudeLocator.resolve { [weak self] _ in
+        ClaudeLocator.shared.resolve { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, HUDConfig.agentTarget == .voiceChat else { return }
                 _ = self.ensureSession()
@@ -124,9 +124,9 @@ final class VoiceAssistant: NSObject, ObservableObject {
 
     private func ensureSession() -> ClaudeSession? {
         if let session, session.isRunning { return session }
-        guard let location = ClaudeLocator.cached else {
+        guard let location = ClaudeLocator.shared.cached else {
             // まだ場所を調べていなければ、調べてからもう一度
-            ClaudeLocator.resolve { [weak self] found in
+            ClaudeLocator.shared.resolve { [weak self] found in
                 MainActor.assumeIsolated {
                     guard let self, self.phase == .thinking else { return }
                     if found == nil {
@@ -274,20 +274,23 @@ extension VoiceAssistant: AVSpeechSynthesizerDelegate {
 
 // MARK: - claude の場所
 
-/// ターミナルと同じ設定で claude の場所と PATH を1度だけ調べて覚えておく
-enum ClaudeLocator {
-    struct Location: Sendable {
-        let executable: String
-        let path: String
-    }
+/// ターミナルと同じ設定で claude の場所と PATH を1度だけ調べて覚えておく。
+/// メインスレッドだけで使う（調べる処理だけ裏で行う）。
+struct ClaudeLocation: Sendable {
+    let executable: String
+    let path: String
+}
 
-    nonisolated(unsafe) private(set) static var cached: Location?
-    nonisolated(unsafe) private static var resolving = false
-    nonisolated(unsafe) private static var waiters: [(Location?) -> Void] = []
+@MainActor
+final class ClaudeLocator {
+    static let shared = ClaudeLocator()
+
+    private(set) var cached: ClaudeLocation?
+    private var resolving = false
+    private var waiters: [(ClaudeLocation?) -> Void] = []
 
     /// completion はメインスレッドで呼ぶ
-    static func resolve(_ completion: @escaping (Location?) -> Void) {
-        dispatchPrecondition(condition: .onQueue(.main))
+    func resolve(_ completion: @escaping (ClaudeLocation?) -> Void) {
         if let cached {
             completion(cached)
             return
@@ -297,18 +300,24 @@ enum ClaudeLocator {
         resolving = true
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let found = lookUp()
+            let found = ClaudeLocator.lookUp()
             DispatchQueue.main.async {
-                cached = found
-                resolving = false
-                let pending = waiters
-                waiters = []
-                pending.forEach { $0(found) }
+                MainActor.assumeIsolated {
+                    ClaudeLocator.shared.finish(found)
+                }
             }
         }
     }
 
-    private static func lookUp() -> Location? {
+    private func finish(_ found: ClaudeLocation?) {
+        cached = found
+        resolving = false
+        let pending = waiters
+        waiters = []
+        for waiter in pending { waiter(found) }
+    }
+
+    nonisolated static func lookUp() -> ClaudeLocation? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         process.arguments = ["-lc", "source ~/.zshrc >/dev/null 2>&1; command -v claude; printf '%s' \"$PATH\""]
@@ -330,9 +339,9 @@ enum ClaudeLocator {
                 return nil
             }
             let path = "\((hit as NSString).deletingLastPathComponent):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
-            return Location(executable: hit, path: path)
+            return ClaudeLocation(executable: hit, path: path)
         }
-        return Location(executable: lines[0], path: lines[lines.count - 1])
+        return ClaudeLocation(executable: lines[0], path: lines[lines.count - 1])
     }
 }
 
@@ -343,7 +352,7 @@ enum ClaudeLocator {
 final class ClaudeSession: @unchecked Sendable {
     enum Event {
         case text(String)
-        case finished(String, isError: Bool)
+        case finished(String, Bool)
         case exited(String)
     }
 
@@ -360,7 +369,7 @@ final class ClaudeSession: @unchecked Sendable {
 
     var isRunning: Bool { process.isRunning }
 
-    init(location: ClaudeLocator.Location, persona: String, model: String) {
+    init(location: ClaudeLocation, persona: String, model: String) {
         let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Muscle/chat", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -444,7 +453,7 @@ final class ClaudeSession: @unchecked Sendable {
         }
         lock.unlock()
 
-        let events = lines.compactMap(Self.parse)
+        let events: [Event] = lines.compactMap { ClaudeSession.parse($0) }
         guard !events.isEmpty else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -467,7 +476,7 @@ final class ClaudeSession: @unchecked Sendable {
         case "result":
             let text = object["result"] as? String ?? ""
             let isError = object["is_error"] as? Bool ?? false
-            return .finished(text, isError: isError)
+            return .finished(text, isError)
         default:
             return nil
         }

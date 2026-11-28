@@ -86,16 +86,16 @@ final class WakeWordListener: ObservableObject {
         }
 
         // 許可のコールバックは任意のスレッドで来るので、必ずメインへ渡す
-        SFSpeechRecognizer.requestAuthorization { status in
-            Task { @MainActor [weak self] in
+        SFSpeechRecognizer.requestAuthorization { [weak self] status in
+            Task { @MainActor in
                 guard let self else { return }
                 guard status == .authorized else {
                     self.message = "音声認識が許可されていません（システム設定 › プライバシーとセキュリティ › 音声認識）"
                     self.enabled = false
                     return
                 }
-                AVCaptureDevice.requestAccess(for: .audio) { granted in
-                    Task { @MainActor [weak self] in
+                AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
+                    Task { @MainActor in
                         guard let self else { return }
                         guard granted else {
                             self.message = "マイクが許可されていません（システム設定 › プライバシーとセキュリティ › マイク）"
@@ -180,8 +180,8 @@ final class WakeWordListener: ObservableObject {
         }
         box.set(request)
 
-        task = recognizer.recognitionTask(with: request) { result, error in
-            Task { @MainActor [weak self] in
+        task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            Task { @MainActor in
                 // 古い世代のタスクからの通知は捨てる（これが無いと再起動が連鎖して暴走する）
                 guard let self, current == self.generation else { return }
                 if let result {
